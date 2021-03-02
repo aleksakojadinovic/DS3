@@ -45,11 +45,14 @@ def variable(idx):
 def variables(n):
     return [variable(i) for i in range(n)]
     
-
+# A linear express of form:
+# c_0x_0 + c_1x_1 + ... + c_nx_n + b
 class LinearExpression:
     def __init__(self,
-                 coeffs=[],
+                 coeffs=None,
                  const=0):
+        if coeffs is None:
+            coeffs = []
         self.coeffs   = np.array(coeffs, dtype='float32')
         self.constant = float(const)
         self.trim()
@@ -180,8 +183,10 @@ class LinearExpression:
         
     # ---- NEGATION ---
     def __neg__(self):
-        self.coeffs *= -1
-        self.constant *= -1
+        new = copy.deepcopy(self)
+        new *= -1
+        return new
+
     
     # ---- ADDITION ---- 
     def __iadd__(self, other):
@@ -236,21 +241,138 @@ class LinearExpression:
         new /= other
         return new
 
+    def create_inequality(self, other, op):
+        oth = other
+        if not isinstance(other, LinearExpression):
+            oth = constant(float(other))
 
-x0, x1, x2 = variables(3)
+        return LinearInequality(self, oth, op)
+
+    def __gt__(self, other):
+        return self.create_inequality(other, GT)
+
+    def __lt__(self, other):
+        return self.create_inequality(other, LT)
+
+    def __ge__(self, other):
+        return self.create_inequality(other, GTE)
+
+    def __le__(self, other):
+        return self.create_inequality(other, LTE)
 
 
-print(-5*x0 + x0 + 15*x1 - x2)
 
+
+
+GT = '>'
+LT = '<'
+GTE = '>='
+LTE = '<='
+
+flipped_op = {
+    GT: LT,
+    LT: GT,
+    GTE: LTE,
+    LTE: GTE
+}
+
+# A linear inequality of the form:
+# le1 <= le2
+# where le1 and le2 are linear expressions
 class LinearInequality:
-    pass
+    def __init__(self,
+                 left=constant(0),
+                 right=constant(0),
+                 op=GT
+                 ):
+
+        self.op = op
+        self.assert_op()
+        if not isinstance(left, LinearExpression):
+            left = constant(float(left))
+        else:
+            left = copy.deepcopy(left)
+        if not isinstance(right, LinearExpression):
+            right = constant(float(right))
+        else:
+            right = copy.deepcopy(right)
+
+        self.left  = left
+        self.right = right
+
+    def __str__(self):
+        return f'{self.left} {self.op} {self.right}'
+
+    def __repr__(self):
+        return str(self)
+
+    def assert_op(self):
+        if self.op not in [GT, LT, GTE, LTE]:
+            raise ValueError(f'Unknown op: {self.op}')
+
+    def flip_op(self):
+        self.op = flipped_op[self.op]
+
+    # ================== ARITHMETIC ===================
+    # Negation
+    def __neg__(self):
+        new = copy.deepcopy(self)
+        new.left *= -1
+        new.right *= -1
+        new.flip_op()
+        return new
+
+    # Addition
+    def __iadd__(self, other):
+        self.left += other
+        self.right += other
+        return self
+
+    def __add__(self, other):
+        new = copy.deepcopy(self)
+        new += other
+        return new
+
+    def __radd__(self, other):
+        return self.__add__(other)
+
+    # Subtraction
+    def __isub__(self, other):
+        self.left -= other
+        self.right -= other
+        return self
+
+    def __sub__(self, other):
+        new = copy.deepcopy(self)
+        new -= other
+        return new
+
+    def __rsub__(self, other):
+        new = copy.deepcopy(self)
+        new.left.__rsub__(other)
+        new.right.__rsub__(other)
+        self.flip_op()
+        return new
+
+    # Multiplication
+
+    def __imul__(self, other):
+        f = float(other)
+        self.left *= f
+        self.right *= f
+        if f < 0:
+            self.flip_op()
+        return self
+
+    def __mul__(self, other):
+        new = copy.deepcopy(self)
+        new *= other
+        return new
+
+    def __rmul__(self, other):
+        return self.__mul__(other)
 
 
-# In[ ]:
-
-
-class LinearInequalitySystem:
-    pass
 
 
 
