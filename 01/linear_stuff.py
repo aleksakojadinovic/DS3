@@ -45,7 +45,7 @@ def variable(idx):
 def variables(n):
     return [variable(i) for i in range(n)]
     
-# A linear express of form:
+# A linear expression of form:
 # c_0x_0 + c_1x_1 + ... + c_nx_n + b
 class LinearExpression:
     def __init__(self,
