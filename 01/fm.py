@@ -1,6 +1,7 @@
 import numpy as np
 import portion as P
 
+# Util, same as np.vstack but it stack onto an empty array
 def mvstack(tup):
     a, b = tup
     if len(a) == 0:
@@ -8,10 +9,9 @@ def mvstack(tup):
     else:
         return np.vstack((a, b))
 
-
+# Removes variable at index `idx`
+# from system Ax >= b
 def remove_variable(A, b, idx):
-    # Removes variable at index `idx`
-    # from system Ax >= b
     m, n = A.shape
 
     # List of stuff that was removed,
@@ -38,7 +38,7 @@ def remove_variable(A, b, idx):
             removed.append((right_part, greater))
 
     new_ineqsA = np.array([])
-    new_ineqsb = np.array([])
+    new_ineqsB = np.array([])
     for i in range(len(removed)):
         expr1 = removed[i][0]
         sign1 = removed[i][1]
@@ -66,11 +66,44 @@ def remove_variable(A, b, idx):
             new_ineqb = new_ineq[-1]
 
             new_ineqsA = mvstack((new_ineqsA, new_ineqA))
-            new_ineqsb = np.hstack((new_ineqsb, -new_ineqb))
+            new_ineqsB = np.hstack((new_ineqsB, -new_ineqb))
 
     newA = mvstack((unmodifiedA, new_ineqsA))
-    newb = np.hstack((unmodifiedB, new_ineqsb))
-    return newA, newb
+    newB = np.hstack((unmodifiedB, new_ineqsB))
+    return newA, newB
+
+# Returns a closed interval for x_idx
+# in system Ax >= b that only contains x_idx
+def solve_single(A, b, idx):
+    final_interval = P.closed(-P.inf, P.inf)
+
+    for a, b in zip(A, b):
+        coeff = a[idx]
+        val = b / coeff
+        if coeff > 0:
+            interval = P.closed(val, P.inf)
+        else:
+            interval = P.closed(-P.inf, val)
+        final_interval = final_interval & interval
+    return final_interval
+
+# Substitues x_id with value in Ax >= b
+def substitute(A, b, idx, value):
+    # Inequalities are of form
+    # c0x0 + c1x1 + ... c_idx*x_idx + ... + c_n-1x_n-1 >= b
+    # Substitute value:
+    # c0x0 + c1x1 + ... c_idx*value + ... + c_n-1x_n-1 >= b
+    # Move to right side:
+    # c0x0 + c1x1 + ... 0x_idx + ... + c_n-1x_n-1 >= b - c_idx*value
+    nA = np.array(A)
+    nb = np.array(b)
+
+    for i in range(len(A)):
+        nb[i] = nb[i] - nA[i][idx] * value
+        nA[i][idx] = 0
+
+    return nA, nb
+
 
 def fourier_motzkin(A, b, varnames=None):
 
@@ -80,45 +113,108 @@ def fourier_motzkin(A, b, varnames=None):
     if b.shape != (m,):
         raise ValueError(f'Invalid `b` size, expecting {m}')
 
-    if varnames is not None and len(varnames) != n:
-        raise ValueError(f'Expecting {n} varnames, got {len(varnames)}')
-    if varnames is None:
+    if varnames is not None:
+        if len(varnames) != n:
+            raise ValueError(f'Expecting {n} varnames, got {len(varnames)}.')
+        if len(set(varnames)) != len(varnames):
+            raise ValueError(f'Varnames must to be unqiue.')
+    else:
         varnames = [f'x_{i}' for i in range(n)]
-
 
     variables = set()
     for expr in A:
         # TODO: Refactor (np.unique, np.argwhere and something like that)
         for idx in map(lambda x: x[0], filter(lambda p: not np.isclose(p[1], 0), enumerate(expr))):
             variables.add(idx)
+    variables = list(variables)
 
+    # List of system through removals
 
     currA = np.array(A)
     currB = np.array(b)
-    for var_to_remove in list(variables)[:-1]:
+    history = [(np.array(currA), np.array(currB))]
+
+    for var_to_remove in variables[:-1]:
         currA, currB = remove_variable(currA, currB, var_to_remove)
+        history.append((np.array(currA), np.array(currB)))
+
     final_var = list(variables)[-1]
 
-    # For testing:
-    # for var_to_remove in [1, 2]:
-    #     currA, currB = remove_variable(currA, currB, var_to_remove)
-    # final_var = 0
+    final_interval = solve_single(currA, currB, final_var)
+    if final_interval.empty:
+        print(f'No solution found.')
+        return None
 
-
-    final_interval = P.closed(-P.inf, P.inf)
-
-    for a, b in zip(currA, currB):
-        coeff = a[final_var]
-        val = b/coeff
-        if coeff > 0:
-            interval = P.closed(val, P.inf)
-        else:
-            interval = P.closed(-P.inf, val)
-        final_interval = final_interval & interval
-
+    print(f'Interval for final variable: ')
     print(f'{final_interval.lower} <= {varnames[final_var]} <= {final_interval.upper}')
 
+    chosen_var_values = np.array([None for _ in variables])
+    chosen_var_values[-1] = any_in_interval(final_interval)
 
+    chosen_intervals = np.array([None for _ in variables])
+    chosen_intervals[-1] = final_interval
+
+
+    for ii in range(n-2, -1, -1):
+        i = variables[ii]
+        print(f'Finding range for variable x_{i} or rather {varnames[i]}')
+        print(f'This can be achieved by substituting the following variables: ')
+        # print(', '.join([f'{varnames[j]}' for j in range()]))
+        # from m-1 backwards and take i+1 of them
+        vars_to_sub = [j for j in range(i+1, n)]
+        values_to_sub = [chosen_var_values[k] for k in vars_to_sub]
+        print(", ".join(f'x_{thei} = {thev}' for thei, thev in zip(vars_to_sub, values_to_sub)))
+
+        tmpA = history[i][0]
+        tmpB = history[i][1]
+
+        print('Into system: ')
+        print(tmpA, tmpB)
+
+        tmpA = history[i][0]
+        tmpB = history[i][1]
+        for var_idx, val in zip(vars_to_sub, values_to_sub):
+            print(f'\t\tsub...x_{var_idx} or rather {varnames[var_idx]} with value {val}')
+            tmpA, tmpB = substitute(tmpA, tmpB, var_idx, val)
+
+        print(f'After substitution we have: ')
+        print(tmpA, tmpB)
+
+        target_solution = solve_single(tmpA, tmpB, i)
+        if target_solution.empty:
+            print(f'No solution found.')
+            return None
+
+        chosen_var_values[i] = any_in_interval(target_solution)
+        chosen_intervals[i] = target_solution
+
+
+
+        print('===================================')
+
+    print('-----------------------------------------------------------------------------')
+    for i, sol_interval in enumerate(chosen_intervals):
+        print(f'{varnames[i]} is in {sol_interval}')
+
+
+
+
+
+
+
+
+
+def any_in_interval(interval):
+    if interval.empty:
+        raise ValueError(f'Empty interval')
+    if interval.lower == -P.inf and interval.upper == P.inf:
+        return 0.0
+    if interval.lower == -P.inf:
+        return interval.upper
+    if interval.upper == P.inf:
+        return interval.lower
+
+    return interval.upper
 
 
 mA = [[7, 2, -2],
