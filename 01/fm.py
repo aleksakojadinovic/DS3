@@ -1,5 +1,6 @@
 import numpy as np
 import portion as P
+import sys
 
 # Util, same as np.vstack but it stack onto an empty array
 def mvstack(tup):
@@ -13,6 +14,11 @@ def mvstack(tup):
 # from system Ax >= b
 def remove_variable(A, b, idx):
     m, n = A.shape
+
+    # print(f'======REMOVING VARIABLE x_{idx}========')
+    # print('from system: ')
+    # print(systos(A, b))
+
 
     # List of stuff that was removed,
     # it's a list of pairs (np.array, bool)
@@ -70,6 +76,9 @@ def remove_variable(A, b, idx):
 
     newA = mvstack((unmodifiedA, new_ineqsA))
     newB = np.hstack((unmodifiedB, new_ineqsB))
+    # print('results in a new system: ')
+    # print(systos(newA, newB))
+    # print(f'======REMOVING VARIABLE======')
     return newA, newB
 
 # Returns a closed interval for x_idx
@@ -79,6 +88,8 @@ def solve_single(A, b, idx):
 
     for a, b in zip(A, b):
         coeff = a[idx]
+        if np.isclose(coeff, 0.0):
+            continue
         val = b / coeff
         if coeff > 0:
             interval = P.closed(val, P.inf)
@@ -104,8 +115,15 @@ def substitute(A, b, idx, value):
 
     return nA, nb
 
+# Inequality to string
+def intos(a, b):
+    return ' + '.join([f'{c}*x_{i}' for i, c in enumerate(a)]) + ' >= ' + str(b)
 
-def fourier_motzkin(A, b, varnames=None):
+# Inequality system to string
+def systos(A, b):
+    return '\r\n'.join([intos(a, b) for a, b in zip(A, b)])
+
+def fourier_motzkin(A, b, elimination_order=None, value_picks=None):
 
     A = np.array(A, dtype='float32')
     b = np.array(b, dtype='float32')
@@ -113,96 +131,84 @@ def fourier_motzkin(A, b, varnames=None):
     if b.shape != (m,):
         raise ValueError(f'Invalid `b` size, expecting {m}')
 
-    if varnames is not None:
-        if len(varnames) != n:
-            raise ValueError(f'Expecting {n} varnames, got {len(varnames)}.')
-        if len(set(varnames)) != len(varnames):
-            raise ValueError(f'Varnames must to be unqiue.')
+    if elimination_order is None:
+        elimination_order = list(range(n))
     else:
-        varnames = [f'x_{i}' for i in range(n)]
+        if any([i > n - 1 or i < 0 for i in elimination_order]):
+            raise ValueError(f'Variable indices out of bounds in elimination order.')
+        if len(set(elimination_order)) != len(elimination_order):
+            raise ValueError(f'Duplicates in elimination order.')
 
-    variables = set()
-    for expr in A:
-        # TODO: Refactor (np.unique, np.argwhere and something like that)
-        for idx in map(lambda x: x[0], filter(lambda p: not np.isclose(p[1], 0), enumerate(expr))):
-            variables.add(idx)
-    variables = list(variables)
+    if value_picks is None:
+        value_picks = 'any'
+
+    varnames = [f'x_{i}' for i in range(n)]
+
 
     # List of system through removals
-
     currA = np.array(A)
     currB = np.array(b)
     history = [(np.array(currA), np.array(currB))]
 
-    for var_to_remove in variables[:-1]:
+    for var_to_remove in elimination_order[:-1]:
         currA, currB = remove_variable(currA, currB, var_to_remove)
         history.append((np.array(currA), np.array(currB)))
 
-    final_var = list(variables)[-1]
+    final_var = list(elimination_order)[-1]
 
     final_interval = solve_single(currA, currB, final_var)
     if final_interval.empty:
         print(f'No solution found.')
         return None
 
-    print(f'Interval for final variable: ')
-    print(f'{final_interval.lower} <= {varnames[final_var]} <= {final_interval.upper}')
-
-    chosen_var_values = np.array([None for _ in variables])
-    chosen_var_values[-1] = any_in_interval(final_interval)
-
-    chosen_intervals = np.array([None for _ in variables])
-    chosen_intervals[-1] = final_interval
 
 
-    for ii in range(n-2, -1, -1):
-        i = variables[ii]
-        print(f'Finding range for variable x_{i} or rather {varnames[i]}')
-        print(f'This can be achieved by substituting the following variables: ')
-        # print(', '.join([f'{varnames[j]}' for j in range()]))
-        # from m-1 backwards and take i+1 of them
-        vars_to_sub = [j for j in range(i+1, n)]
-        values_to_sub = [chosen_var_values[k] for k in vars_to_sub]
-        print(", ".join(f'x_{thei} = {thev}' for thei, thev in zip(vars_to_sub, values_to_sub)))
+    chosen_var_values = np.array([None for _ in elimination_order])
+    chosen_var_values[final_var] = any_in_interval(final_interval) if value_picks == 'any' else value_picks[0]
 
-        tmpA = history[i][0]
-        tmpB = history[i][1]
+    chosen_intervals = np.array([None for _ in elimination_order])
+    chosen_intervals[final_var] = final_interval
 
-        print('Into system: ')
-        print(tmpA, tmpB)
+    # print('----------------------------------------------------')
+    # print(f'Interval for final variable: ')
+    # print(f'{final_interval.lower} <= {varnames[final_var]} <= {final_interval.upper}')
+    # print(f'Chosen value for final variable: ')
+    # print(f'x_{final_var} = {chosen_var_values[final_var]}')
+    # print('----------------------------------------------------')
 
-        tmpA = history[i][0]
-        tmpB = history[i][1]
-        for var_idx, val in zip(vars_to_sub, values_to_sub):
-            print(f'\t\tsub...x_{var_idx} or rather {varnames[var_idx]} with value {val}')
-            tmpA, tmpB = substitute(tmpA, tmpB, var_idx, val)
+    # Loops over variables that are to be found.
+    for pick, i in enumerate(range(n-2, -1, -1)):
+        var_to_find = elimination_order[i]
+        # print(f'Finding range for variable x_{var_to_find}')
+        # print(f'This can be achieved by substituting the following variables: ')
+        vars_to_substitute = elimination_order[i+1:]
+        # print('\t\t', ', '.join([f'x_{idx}' for idx in vars_to_substitute]))
+        # print(f'In the system: ')
+        system_to_subA, system_to_subB = history[i]
+        # print(systos(system_to_subA, system_to_subB))
+        new_sysA, new_sysB = system_to_subA, system_to_subB
+        for subvar in vars_to_substitute:
+            new_sysA, new_sysB = substitute(new_sysA, new_sysB, subvar, chosen_var_values[subvar])
 
-        print(f'After substitution we have: ')
-        print(tmpA, tmpB)
+        # print(f'That substitution gives a system:')
+        # print(systos(new_sysA, new_sysB))
 
-        target_solution = solve_single(tmpA, tmpB, i)
-        if target_solution.empty:
+        found_interval = solve_single(new_sysA, new_sysB, var_to_find)
+        if found_interval.empty:
             print(f'No solution found.')
             return None
+        chosen_intervals[var_to_find] = found_interval
+        # print(f'x_{var_to_find} is in {found_interval}, and we pick')
+        if pick + 1 < len(value_picks):
+            found_value = any_in_interval(found_interval) if value_picks == 'any' else value_picks[pick + 1]
+            chosen_var_values[var_to_find] = found_value
+            # print(f'x_{var_to_find} = {found_value}')
 
-        chosen_var_values[i] = any_in_interval(target_solution)
-        chosen_intervals[i] = target_solution
+        # print('===================================')
 
-
-
-        print('===================================')
-
-    print('-----------------------------------------------------------------------------')
+    # print('-----------------------------------------------------------------------------')
     for i, sol_interval in enumerate(chosen_intervals):
         print(f'{varnames[i]} is in {sol_interval}')
-
-
-
-
-
-
-
-
 
 def any_in_interval(interval):
     if interval.empty:
@@ -224,4 +230,5 @@ mA = [[7, 2, -2],
 
 mb = [4, -4, 1, -2]
 
-fourier_motzkin(mA, mb, varnames=['x', 'y', 'z'])
+fourier_motzkin(mA, mb, elimination_order=[2, 1, 0], value_picks=[1, 4])
+# fourier_motzkin(mA, mb, elimination_order=[2, 1, 0])
