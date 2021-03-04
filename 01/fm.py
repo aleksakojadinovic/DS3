@@ -2,6 +2,8 @@ import numpy as np
 import portion as P
 import sys
 
+# ======================== UTILS ======================================
+
 # Util, same as np.vstack but it stack onto an empty array
 def mvstack(tup):
     a, b = tup
@@ -9,6 +11,16 @@ def mvstack(tup):
         return np.array(b)
     else:
         return np.vstack((a, b))
+
+# Inequality to string
+def intos(a, b):
+    return ' + '.join([f'{c}*x_{i}' for i, c in enumerate(a)]) + ' >= ' + str(b)
+
+# Inequality system to string
+def systos(A, b):
+    return '\r\n'.join([intos(a, b) for a, b in zip(A, b)])
+
+# ======================== MIDSTEPS ===================================
 
 # Removes variable at index `idx`
 # from system Ax >= b
@@ -115,13 +127,20 @@ def substitute(A, b, idx, value):
 
     return nA, nb
 
-# Inequality to string
-def intos(a, b):
-    return ' + '.join([f'{c}*x_{i}' for i, c in enumerate(a)]) + ' >= ' + str(b)
+# Picks a value from the interval
+def any_in_interval(interval):
+    if interval.empty:
+        raise ValueError(f'Empty interval')
+    if interval.lower == -P.inf and interval.upper == P.inf:
+        return 0.0
+    if interval.lower == -P.inf:
+        return interval.upper
+    if interval.upper == P.inf:
+        return interval.lower
 
-# Inequality system to string
-def systos(A, b):
-    return '\r\n'.join([intos(a, b) for a, b in zip(A, b)])
+    return interval.upper
+
+# ============================ (1) FOURIER-MOTZKIN ===============================
 
 def fourier_motzkin(A, b, elimination_order=None, value_picks=None):
 
@@ -210,17 +229,15 @@ def fourier_motzkin(A, b, elimination_order=None, value_picks=None):
     for i, sol_interval in enumerate(chosen_intervals):
         print(f'{varnames[i]} is in {sol_interval}')
 
-def any_in_interval(interval):
-    if interval.empty:
-        raise ValueError(f'Empty interval')
-    if interval.lower == -P.inf and interval.upper == P.inf:
-        return 0.0
-    if interval.lower == -P.inf:
-        return interval.upper
-    if interval.upper == P.inf:
-        return interval.lower
+# ============================ (2) POINT IN SYSTEM ===============================
 
-    return interval.upper
+# Checks wheter Ax >= b holds for given x
+def point_in_system(A, b, x):
+    A = np.array(A)
+    b = np.array(b)
+    x = np.array(x)
+    return ((A @ x) >= b).all()
+
 
 
 mA = [[7, 2, -2],
@@ -229,6 +246,17 @@ mA = [[7, 2, -2],
      [5, -1, 1]]
 
 mb = [4, -4, 1, -2]
+print('Working with system: ')
+print(systos(mA, mb))
+print('==============================================')
 
+print('1. Fourier-Motzkin, test1:')
 fourier_motzkin(mA, mb, elimination_order=[2, 1, 0], value_picks=[1, 4])
+
+print('2. Point-in-system, test2:')
+p = [-1, -1, 1]
+in_str = 'is' if point_in_system(mA, mb, p) else 'is not'
+print(f'Point {p} {in_str} in the system.')
+
+
 # fourier_motzkin(mA, mb, elimination_order=[2, 1, 0])
