@@ -86,8 +86,11 @@ def remove_variable(A, b, idx):
             new_ineqsA = mvstack((new_ineqsA, new_ineqA))
             new_ineqsB = np.hstack((new_ineqsB, -new_ineqb))
 
-    newA = mvstack((unmodifiedA, new_ineqsA))
-    newB = np.hstack((unmodifiedB, new_ineqsB))
+    newA = unmodifiedA
+    newB = unmodifiedB
+    if len(new_ineqsA) > 0:
+        newA = mvstack((unmodifiedA, new_ineqsA))
+        newB = np.hstack((unmodifiedB, new_ineqsB))
     # print('results in a new system: ')
     # print(systos(newA, newB))
     # print(f'======REMOVING VARIABLE======')
@@ -142,7 +145,7 @@ def any_in_interval(interval):
 
 # ============================ (1) FOURIER-MOTZKIN ===============================
 
-def fourier_motzkin(A, b, elimination_order=None, value_picks=None):
+def fourier_motzkin(A, b, elimination_order=None, value_picks=None, just_last=False):
 
     A = np.array(A, dtype='float32')
     b = np.array(b, dtype='float32')
@@ -177,7 +180,6 @@ def fourier_motzkin(A, b, elimination_order=None, value_picks=None):
 
     final_interval = solve_single(currA, currB, final_var)
     if final_interval.empty:
-        print(f'No solution found.')
         return None
 
 
@@ -187,6 +189,9 @@ def fourier_motzkin(A, b, elimination_order=None, value_picks=None):
 
     chosen_intervals = np.array([None for _ in elimination_order])
     chosen_intervals[final_var] = final_interval
+
+    if just_last:
+        return final_interval
 
     # print('----------------------------------------------------')
     # print(f'Interval for final variable: ')
@@ -214,7 +219,6 @@ def fourier_motzkin(A, b, elimination_order=None, value_picks=None):
 
         found_interval = solve_single(new_sysA, new_sysB, var_to_find)
         if found_interval.empty:
-            print(f'No solution found.')
             return None
         chosen_intervals[var_to_find] = found_interval
         # print(f'x_{var_to_find} is in {found_interval}, and we pick')
@@ -226,8 +230,7 @@ def fourier_motzkin(A, b, elimination_order=None, value_picks=None):
         # print('===================================')
 
     # print('-----------------------------------------------------------------------------')
-    for i, sol_interval in enumerate(chosen_intervals):
-        print(f'{varnames[i]} is in {sol_interval}')
+    return chosen_intervals
 
 # ============================ (2) POINT IN SYSTEM ===============================
 
@@ -246,17 +249,120 @@ mA = [[7, 2, -2],
      [5, -1, 1]]
 
 mb = [4, -4, 1, -2]
+
+# ============================ (2) LINEAR PROGRAMMING ===============================
+# Solves linear programming problem:
+# (min) c^Tx
+# where Ax <= b
+# and x >= 0
+def find_min(c, A, b):
+    c = np.array(c)
+    A = np.array(A)
+    b = np.array(b)
+
+    if np.isclose(c, 0.0).all():
+        return 0.0
+
+    # First we transform A and b in order to
+    # flip the inequality sign, since Fourier-Motzkin works only with >=
+    A = -A
+    b = -b
+
+    # Find k such that
+    # c_k != 0 and
+    # there is at least one inequality in the system
+    # such that a_k != 0
+
+    k_candidates = np.nonzero(np.invert(np.isclose(c, 0.0)))[0]
+    if len(k_candidates) == 0:
+        # This means that f is a constant (f = 0) and so that is the minimum
+        return 0.0
+    k = None
+    done = False
+    for row in A:
+        for k_candidate in k_candidates:
+            if not np.isclose(row[k_candidate], 0.0):
+                k = k_candidate
+                done = True
+                break
+        if done:
+            break
+
+    if k is None:
+        # This means that no inequality contains any of the
+        # variables in the function so basically I've no idea what to do
+        # let's just say no solution
+        return None
+
+    # Now we need to express x_k from the function, that is
+    # f = c_0x_0 + .... c_kx_k + .... c_n-1x_n-1
+    # f = [c0 c1 .... ck ..... cn-1]
+    # ------
+    # c_kx_k = -all_else + f
+    # x_k = (1/c_k) (-all_else + f)
+    # x_k = -all_else/c_k + f/ck
+    # x_k = [-c_0/c_k, -c_1/c_k, .... 0 , -c_k+1/c_k  , ...., c_n-1/c_k, 1/c_k]
+
+    x_k = np.hstack((-c/c[k], 1/c[k]))
+    x_k[k] = 0.0
+    # print(x_k)
+    A = np.append(A, [[0.0] for _ in range(A.shape[0])], axis=1)
+    m, n = A.shape
+    # print(systos(A, b))
+    # Now we insert x_k expression into every inequality
+    for i, const in zip(range(m), b):
+        if np.isclose(A[i][k], 0.0):
+            continue
+        A[i] = A[i] + (x_k if A[i][k] > 0 else -x_k)
+        A[i][k] = 0.0
+
+
+
+    # Now just add all the x >= 0 inequalities:
+    for i in range(n - 1):
+        cond = np.zeros(n)
+        cond[i] = 1.0
+        A = np.vstack((A, cond))
+        b = np.hstack((b, 0.0))
+
+    intervals = fourier_motzkin(A, b)
+    if intervals is None:
+        return None
+    else:
+        return intervals[-1].lower
+
+
+
+
+
+
 print('Working with system: ')
 print(systos(mA, mb))
 print('==============================================')
 
 print('1. Fourier-Motzkin, test1:')
-fourier_motzkin(mA, mb, elimination_order=[2, 1, 0], value_picks=[1, 4])
+solution_intervals = fourier_motzkin(mA, mb, elimination_order=[2, 1, 0], value_picks=[1, 4])
+print('\r\n'.join(f'x_{i} is in {sol_interval}' for i, sol_interval in enumerate(solution_intervals))) if solution_intervals is not None else 'No solution.'
+
+print('==============================================')
 
 print('2. Point-in-system, test2:')
 p = [-1, -1, 1]
-in_str = 'is' if point_in_system(mA, mb, p) else 'is not'
+in_str = 'is' if point_in_system(mA, mb, p) else 'is NOT'
 print(f'Point {p} {in_str} in the system.')
 
+print('==============================================')
+lpc = [-1, -3]
+lpA = [[1, 1],
+       [-1, 2]]
+lpb = [6, 8]
+print('3. Linear programming, test3: ')
+print('Minimize f =', ' + '.join(f'{c}*x_{i}' for i, c in enumerate(lpc)))
+print('given:')
+print(systos(lpA, lpb))
 
-# fourier_motzkin(mA, mb, elimination_order=[2, 1, 0])
+
+themin = find_min(lpc, lpA, lpb)
+print(f'min(f)={themin}' if themin is not None else 'Unsolvable.')
+
+
