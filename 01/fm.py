@@ -336,55 +336,45 @@ def find_min(c, A, b):
         cond[i] = 1.0
         A = np.vstack((A, cond))
         b = np.hstack((b, 0.0))
-    # print('final transform to: ')
-    # print(systos(A, b))
-    intervals = fourier_motzkin(A, b)
-    if intervals is None:
+    print('final transform to: ')
+    print(systos(A, b))
+
+    interval = fourier_motzkin(A, b, just_last=True)
+    if interval is None:
         return None
     else:
-        return intervals[-1].lower
+        return interval.lower
 
 
 
 
 
 #
-# print('Working with system: ')
-# print(systos(mA, mb))
-# print('==============================================')
-#
-# print('1. Fourier-Motzkin, test1:')
-# solution_intervals = fourier_motzkin(mA, mb, elimination_order=[2, 1, 0], value_picks=[1, 4])
-# print('\r\n'.join(f'x_{i} is in {sol_interval}' for i, sol_interval in enumerate(solution_intervals))) if solution_intervals is not None else 'No solution.'
-#
-# print('==============================================')
-#
-# print('2. Point-in-system, test2:')
-# p = [-1, -1, 1]
-# in_str = 'is' if point_in_system(mA, mb, p) else 'is NOT'
-# print(f'Point {p} {in_str} in the system.')
-#
-# print('==============================================')
-# lpc = [-1, -3]
-# lpA = [[1, 1],
-#        [-1, 2]]
-# lpb = [6, 8]
-# print('3. Linear programming, test3: ')
-# print('Minimize f =', ' + '.join(f'{c}*x_{i}' for i, c in enumerate(lpc)))
-# print('given:')
-# print(systos(lpA, lpb))
-#
-#
-# themin = find_min(lpc, lpA, lpb)
-# print(f'min(f)={themin}' if themin is not None else 'Unsolvable.')
+print('Working with system: ')
+print(systos(mA, mb))
+print('==============================================')
 
-#
-fA = [[-1, 1],
-      [-0.5, -1]]
-fb = [-1, -1]
-fc = [-1, -1]
-print('solving')
-print(systos(fA, fb))
-print('function:')
-print(fc)
-print(find_min(fc, -np.array(fA), -np.array(fb)))
+print('1. Fourier-Motzkin, test1:')
+solution_intervals = fourier_motzkin(mA, mb, elimination_order=[2, 1, 0], value_picks=[1, 4])
+print('\r\n'.join(f'x_{i} is in {sol_interval}' for i, sol_interval in enumerate(solution_intervals))) if solution_intervals is not None else 'No solution.'
+
+print('==============================================')
+
+print('2. Point-in-system, test2:')
+p = [-1, -1, 1]
+in_str = 'is' if point_in_system(mA, mb, p) else 'is NOT'
+print(f'Point {p} {in_str} in the system.')
+
+print('==============================================')
+lpc = [-1, -3]
+lpA = [[1, 1],
+       [-1, 2]]
+lpb = [6, 8]
+print('3. Linear programming, test3: ')
+print('Minimize f =', ' + '.join(f'{c}*x_{i}' for i, c in enumerate(lpc)))
+print('given:')
+print(systos(lpA, lpb))
+
+
+themin = find_min(lpc, lpA, lpb)
+print(f'min(f)={themin}' if themin is not None else 'Unsolvable.')
