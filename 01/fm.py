@@ -4,7 +4,7 @@ import sys
 
 # ======================== UTILS ======================================
 
-# Util, same as np.vstack but it stack onto an empty array
+# Util, same as np.vstack but it can stack onto an empty array
 def mvstack(tup):
     a, b = tup
     if len(a) == 0:
