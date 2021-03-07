@@ -332,12 +332,17 @@ def find_min(c, A, b):
 
     # Now just add all the x >= 0 inequalities:
     for i in range(n - 1):
+        if i == k:
+            # Here we don't add x_k >= 0 because x_k is removed
+            # but we rather add the x_k expression to be greater than zero
+            A = np.vstack((A, x_k))
+            b = np.hstack((b, 0.0))
+            continue
         cond = np.zeros(n)
         cond[i] = 1.0
         A = np.vstack((A, cond))
         b = np.hstack((b, 0.0))
-    print('final transform to: ')
-    print(systos(A, b))
+
 
     interval = fourier_motzkin(A, b, just_last=True)
     if interval is None:
@@ -349,7 +354,7 @@ def find_min(c, A, b):
 
 
 
-#
+
 print('Working with system: ')
 print(systos(mA, mb))
 print('==============================================')
@@ -374,7 +379,14 @@ print('3. Linear programming, test3: ')
 print('Minimize f =', ' + '.join(f'{c}*x_{i}' for i, c in enumerate(lpc)))
 print('given:')
 print(systos(lpA, lpb))
-
-
 themin = find_min(lpc, lpA, lpb)
 print(f'min(f)={themin}' if themin is not None else 'Unsolvable.')
+
+
+print('==============================================')
+print(f'4. Linear programming (poslednji primer iz sveske)')
+fA = [[2, -1, 1],
+      [-1, 3, -5]]
+fb = [-1, 3]
+fc = [1, 1, 1]
+print(find_min(fc, fA, fb))
