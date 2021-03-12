@@ -3,6 +3,9 @@ import portion as P
 
 # ======================== UTILS ======================================
 
+FLOAT_T = 'float32'
+# FLOAT_T = 'float64'
+
 # Util, same as np.vstack but it can stack onto an empty array
 def mvstack(tup):
     a, b = tup
@@ -18,6 +21,9 @@ def intos(a, b):
 # Inequality system to string
 def systos(A, b):
     return '\r\n'.join([intos(a, b) for a, b in zip(A, b)])
+
+def misclose(a, b):
+    return a == b
 
 # ======================== MIDSTEPS ===================================
 
@@ -43,7 +49,7 @@ def remove_variable(A, b, idx):
     unmodifiedB = np.array([])
 
     for sum_part, constant in zip(A, b):
-        if np.isclose(sum_part[idx], 0.0):
+        if misclose(sum_part[idx], 0.0):
             unmodifiedA = mvstack((unmodifiedA, sum_part))
             unmodifiedB = np.hstack((unmodifiedB, constant))
         else:
@@ -107,7 +113,7 @@ def solve_single(A, b, idx):
     for a, b in zip(A, b):
         # print(f'indexing with {idx} on {a}')
         coeff = a[idx]
-        if np.isclose(coeff, 0.0):
+        if misclose(coeff, 0.0):
             continue
         val = b / coeff
         if coeff > 0:
@@ -151,8 +157,8 @@ def any_in_interval(interval):
 
 def fourier_motzkin(A, b, elimination_order=None, value_picks=None, just_last=False):
 
-    A = np.array(A, dtype='float32')
-    b = np.array(b, dtype='float32')
+    A = np.array(A, dtype=FLOAT_T)
+    b = np.array(b, dtype=FLOAT_T)
     m, n = A.shape
     if b.shape != (m,):
         raise ValueError(f'Invalid `b` size, expecting {m}')
@@ -266,11 +272,11 @@ mb = [4, -4, 1, -2]
 # where Ax <= b
 # and x >= 0
 def find_min(c, A, b):
-    c = np.array(c)
-    A = np.array(A)
-    b = np.array(b)
+    c = np.array(c, dtype=FLOAT_T)
+    A = np.array(A, dtype=FLOAT_T)
+    b = np.array(b, dtype=FLOAT_T)
 
-    if np.isclose(c, 0.0).all():
+    if misclose(c, 0.0).all():
         return 0.0
 
     # First we transform A and b in order to
@@ -283,7 +289,7 @@ def find_min(c, A, b):
     # there is at least one inequality in the system
     # such that a_k != 0
 
-    k_candidates = np.nonzero(np.invert(np.isclose(c, 0.0)))[0]
+    k_candidates = np.nonzero(np.invert(misclose(c, 0.0)))[0]
     if len(k_candidates) == 0:
         # This means that f is a constant (f = 0) and so that is the minimum
         return 0.0
@@ -291,7 +297,7 @@ def find_min(c, A, b):
     done = False
     for row in A:
         for k_candidate in k_candidates:
-            if not np.isclose(row[k_candidate], 0.0):
+            if not misclose(row[k_candidate], 0.0):
                 k = k_candidate
                 done = True
                 break
@@ -322,7 +328,7 @@ def find_min(c, A, b):
     # print(systos(A, b))
     # Now we insert x_k expression into every inequality
     for i, const in zip(range(m), b):
-        if np.isclose(A[i][k], 0.0):
+        if misclose(A[i][k], 0.0):
             continue
         A[i] = A[i] + A[i][k] * x_k
         A[i][k] = 0.0
@@ -384,8 +390,11 @@ print(f'min(f)={themin}' if themin is not None else 'Unsolvable.')
 
 print('==============================================')
 print(f'4. Linear programming (poslednji primer iz sveske)')
-fA = [[2, -1, 1],
-      [-1, 3, -5]]
-fb = [-1, 3]
-fc = [1, 1, 1]
+
+fA = [[1, -1, -1, 3],
+      [5, 1, 3, 8],
+      [-1, 2, 3, -5]]
+fb = [1, 55, 3]
+fc = [-4, -1, -5, -3]
 print(find_min(fc, fA, fb))
+
