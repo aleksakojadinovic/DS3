@@ -1,5 +1,5 @@
 import numpy as np
-
+import portion
 # Linear programming problem:
 # Minimize f = c1x1 + ... + cnxn
 # given:
@@ -98,6 +98,56 @@ def simplex(A, b, c, Q, P, x0):
 
     y = np.linalg.solve(y_sysA, y_sysB)
     print(f'y = {y}')
+
+    y_extended = np.zeros(sn)
+    at_p = 0
+    for i in range(sn):
+        if i in P:
+            y_extended[i] = y[at_p]
+            at_p += 1
+        else:
+            y_extended[i] = 0
+    print(f'\t\textended y={y_extended}')
+
+    print('--STEP 4 --')
+    T_interval = portion.closed(-portion.inf, portion.inf)
+    for i in P:
+        # we're looking for an expression of the form
+        # x0[i] - ty[i] >= 0
+        # transforms to:
+        # ty[i] <= x0[i]
+        # Now it all depends on the sign of y[i]
+        if y_extended[i] == 0:
+            continue
+
+        left_side = y_extended[i]
+        right_side = x0[i]
+        if (left_side > 0 and right_side > 0) or (left_side < 0 and right_side < 0):
+            # Same signs, meaning t <= x0[i] / y[i]
+            t_current = portion.closed(-portion.inf, right_side/left_side)
+        else:
+            # different signs, meaning t >= x0[i] / y[i]
+            t_current = portion.closed(right_side/left_side, portion.inf)
+        T_interval = T_interval & t_current
+
+
+    if T_interval.upper == portion.inf or T_interval.upper < 0:
+        print(f'Step 4 condition - f unbounded!')
+        # maybe return None instead of this
+        return float('-inf')
+
+
+    t_star = T_interval.upper
+    print(f't_star = {t_star}')
+
+
+    print('--STEP 5--')
+
+
+
+
+
+
 
 
 
