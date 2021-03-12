@@ -52,96 +52,136 @@ def simplex(A, b, c, Q, P, x0):
     print(simplex_matrix_to_string(simplex_matrix))
 
     sm, sn = simplex_matrix.shape
-    print('--STEP 1--')
-    ### STEP 1
-    # Transform target function f = \sum{c_px_p} + \sum{c_qx_q}
-    # find u = (u1, ..., um) such that
-    # ukp = c_p, p in P
-    # each column kp is A[:, p].reshape(-1, 1)
+    while True:
+        print('--STEP 1--')
+        ### STEP 1
+        # Transform target function f = \sum{c_px_p} + \sum{c_qx_q}
+        # find u = (u1, ..., um) such that
+        # ukp = c_p, p in P
+        # each column kp is A[:, p].reshape(-1, 1)
 
-    u_sysA = np.array(simplex_matrix[:-1, P[0]]).reshape(-1, 1)
-    u_sysB = np.array(c[P[0]])
-    for p in P[1:]:
-        new_col = simplex_matrix[:-1, p].reshape(-1, 1)
-        u_sysA = np.hstack((u_sysA, new_col))
-        u_sysB = np.hstack((u_sysB, c[p]))
+        u_sysA = np.array(simplex_matrix[:-1, P[0]]).reshape(-1, 1)
+        u_sysB = np.array(c[P[0]])
+        for p in P[1:]:
+            new_col = simplex_matrix[:-1, p].reshape(-1, 1)
+            u_sysA = np.hstack((u_sysA, new_col))
+            u_sysB = np.hstack((u_sysB, c[p]))
 
-    u = np.linalg.solve(u_sysA, u_sysB)
+        u = np.linalg.solve(u_sysA, u_sysB)
 
-    print(f'u = {u}')
+        print(f'u = {u}')
 
-    # pure_f = np.array([c[q] - np.dot(u, A[:, q]) for q in Q] + [np.dot(u, b)])
-    pure_f = np.zeros(sn)
-    for i in range(sn):
-        if i in Q:
-            pure_f[i] = c[i] - np.dot(u, simplex_matrix[:-1, i])
-        elif i == sn - 1:
-            pure_f[i] = np.dot(u, b)
-        else:
-            pure_f[i] = 0
+        # pure_f = np.array([c[q] - np.dot(u, A[:, q]) for q in Q] + [np.dot(u, b)])
+        pure_f = np.zeros(sn)
+        for i in range(sn):
+            if i in Q:
+                pure_f[i] = c[i] - np.dot(u, simplex_matrix[:-1, i])
+            elif i == sn - 1:
+                pure_f[i] = np.dot(u, b)
+            else:
+                pure_f[i] = 0
 
-    print(f'pure_f = {pure_f}')
+        print(f'pure_f = {pure_f}')
 
-    print('--STEP 2--')
-    if (pure_f[Q] >= 0).all():
-        print(f'Step 2 stop condition reached, solution is x0 = {x0}')
-        return x0
-    print(f'Step 2 stop condition not reached, proceed to step3')
+        print('--STEP 2--')
+        if (pure_f[Q] >= 0).all():
+            print(f'Step 2 stop condition reached, solution is x0 = {x0}')
+            return x0
+        print(f'Step 2 stop condition not reached, proceed to step3')
 
-    print('--STEP 3--')
+        print('--STEP 3--')
 
-    j = np.where(pure_f[Q] < 0)[0][0]
-    print(f'Choosing j = {j}')
+        j = np.where(pure_f[Q] < 0)[0][0]
+        print(f'Choosing j = {j}')
 
-    y_sysA = u_sysA
-    y_sysB = simplex_matrix[:-1, j]
+        y_sysA = u_sysA
+        y_sysB = simplex_matrix[:-1, j]
 
-    y = np.linalg.solve(y_sysA, y_sysB)
-    print(f'y = {y}')
+        y = np.linalg.solve(y_sysA, y_sysB)
+        print(f'y = {y}')
 
-    y_extended = np.zeros(sn)
-    at_p = 0
-    for i in range(sn):
-        if i in P:
-            y_extended[i] = y[at_p]
-            at_p += 1
-        else:
-            y_extended[i] = 0
-    print(f'\t\textended y={y_extended}')
+        y_extended = np.zeros(sn)
+        at_p = 0
+        for i in range(sn):
+            if i in P:
+                y_extended[i] = y[at_p]
+                at_p += 1
+            else:
+                y_extended[i] = 0
+        print(f'\t\textended y={y_extended}')
 
-    print('--STEP 4 --')
-    T_interval = portion.closed(-portion.inf, portion.inf)
-    for i in P:
-        # we're looking for an expression of the form
-        # x0[i] - ty[i] >= 0
-        # transforms to:
-        # ty[i] <= x0[i]
-        # Now it all depends on the sign of y[i]
-        if y_extended[i] == 0:
-            continue
-
-        left_side = y_extended[i]
-        right_side = x0[i]
-        if (left_side > 0 and right_side > 0) or (left_side < 0 and right_side < 0):
-            # Same signs, meaning t <= x0[i] / y[i]
-            t_current = portion.closed(-portion.inf, right_side/left_side)
-        else:
-            # different signs, meaning t >= x0[i] / y[i]
-            t_current = portion.closed(right_side/left_side, portion.inf)
-        T_interval = T_interval & t_current
-
-
-    if T_interval.upper == portion.inf or T_interval.upper < 0:
-        print(f'Step 4 condition - f unbounded!')
-        # maybe return None instead of this
-        return float('-inf')
+        print('--STEP 4 --')
+        T_interval = portion.closed(-portion.inf, portion.inf)
+        for i in P:
+            # we're looking for an expression of the form
+            # x0[i] - ty[i] >= 0
+            # transforms to:
+            # ty[i] <= x0[i]
+            # Now it all depends on the sign of y[i]
+            if y_extended[i] == 0: #division by zero
+                continue
+            left_side = y_extended[i]
+            right_side = x0[i]
+            if (left_side > 0 and right_side > 0) or (left_side < 0 and right_side < 0):
+                # Same signs, meaning t <= x0[i] / y[i]
+                t_current = portion.closed(-portion.inf, right_side/left_side)
+            else:
+                # different signs, meaning t >= x0[i] / y[i]
+                t_current = portion.closed(right_side/left_side, portion.inf)
+            T_interval = T_interval & t_current
 
 
-    t_star = T_interval.upper
-    print(f't_star = {t_star}')
+        if T_interval.upper == portion.inf or T_interval.upper < 0:
+            print(f'Step 4 condition - f unbounded!')
+            # maybe return None instead of this
+            return float('-inf')
 
 
-    print('--STEP 5--')
+        t_star = T_interval.upper
+        print(f't_star = {t_star}')
+
+
+        print('--STEP 5--')
+        s_choice = None
+        for s in P:
+            if y_extended[s] <= 0:
+                continue
+            expr = x0[s] - t_star * y_extended[s]
+            if expr == 0:
+                s_choice = s
+                break
+
+        if s_choice is None:
+            print('EVO NE ZNAM BOGAMI')
+            return None
+
+        print(f'Choosing s={s_choice}')
+
+        new_x = np.zeros(sn-1)
+        for i in range(len(new_x)):
+            if i in P and i != s_choice:
+                new_x[i] = x0[i] - t_star * y_extended[i]
+            elif i == j:
+                new_x[i] = t_star
+            else:
+                new_x[i] = 0
+
+        print(f'new x = {new_x}')
+
+
+        newP = np.unique(np.hstack((P[P != s_choice], j)))
+        newQ = np.unique(np.hstack((Q[Q != j], s_choice)))
+        print(f'newP = {newP}')
+        print(f'newQ = {newQ}')
+
+        P = newP
+        Q = newQ
+        x0 = new_x
+
+
+
+
+
 
 
 
