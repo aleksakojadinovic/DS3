@@ -1,11 +1,14 @@
 import numpy as np
 import portion
-# Linear programming problem:
-# Minimize f = c1x1 + ... + cnxn
-# given:
-# k1x1 + ... knxn = b (k are columns)
-# and:
-# x1, .... xn >= 0
+import sys
+import argparse
+
+LOG = True
+
+def log(*args, **kwargs):
+    if LOG:
+        print(*args, **kwargs)
+
 
 """Linear expression to string"""
 def lexp_to_string(exp):
@@ -31,7 +34,6 @@ def simplex_matrix_to_string(A):
 
 
 """Returns a tuple (simplex_matrix, Q, P, x0)"""
-
 def to_canonical(A, b, c):
     # TODO: Optimize by allocating entire matrix once and then filling values with indexing
     # TODO: Also this is probably incorrect since basis doesn't always have to be consisted
@@ -47,18 +49,19 @@ def to_canonical(A, b, c):
     P = np.array(range(n, s_matrix.shape[1] - 1))
     Q = np.array(range(n))
     # TODO: Hardcoded for now until I figure it out
-    return s_matrix, Q, P, np.array([0, 0, 3, 5])
+
+    return s_matrix, Q, P, np.append(np.zeros(s_matrix.shape[1] - len(b) - 1), b)
 
 def canonical_simplex(simplex_matrix, Q, P, x0):
-    print('>>>>>>>>>>>>>>>>CANONICAL SIMPLEX ALGORITHM<<<<<<<<<<<<<<<<<<<<<<')
+    log('>>>>>>>>>>>>>>>>REVISED SIMPLEX ALGORITHM<<<<<<<<<<<<<<<<<<<<<<')
     iteration = 1
     while True:
         P = np.sort(P)
         Q = np.sort(Q)
-        print(f'<<<Iteration {iteration}>>>')
-        print(simplex_matrix_to_string(simplex_matrix))
+        log(f'<<<Iteration {iteration}>>>')
+        log(simplex_matrix_to_string(simplex_matrix))
         iteration += 1
-        print(f'P={P}, Q={Q}, x0={x0}')
+        log(f'P={P}, Q={Q}, x0={x0}')
 
         b = simplex_matrix[:-1, -1]
         c = simplex_matrix[-1:, :].flatten()
@@ -66,39 +69,39 @@ def canonical_simplex(simplex_matrix, Q, P, x0):
         num_basis = len(P)
         num_non_basis = len(Q)
 
-        print('------STEP 1-------')
+        log('------STEP 1-------')
         u_sysA = np.array(simplex_matrix[:-1, P]).T
         u_sysB = np.array(c[P])
-        print(f'Solving system for u with', u_sysA, u_sysB, sep='\r\n')
         u = np.linalg.solve(u_sysA, u_sysB)
-        print(f'u = {u}')
+        log(f'u = {u}')
 
         pure_f = np.zeros(simplex_n)
         pure_f[-1] = np.dot(u, b)
         for i in range(len(pure_f - 1)):
             pure_f[i] = c[i] - np.dot(u, simplex_matrix[:-1, i]) if i in Q else 0
-        print(f'pure f = {pure_f}')
+        log(f'pure f = {pure_f}')
 
-        print('------STEP 2-------')
+        log('------STEP 2-------')
         if (pure_f[:-1] >= 0).all():
-            print(f'Step 2 stop condition reached, returning current x0')
+            log(f'Step 2 stop condition reached, returning current x0')
             return x0, np.dot(x0, c[:-1])
-        print('Step 2 stop condition NOT reached, continue to step 3')
+        log('Step 2 stop condition NOT reached, continue to step 3')
 
-        print('------STEP 3-------')
+        log('------STEP 3-------')
         j = np.where(pure_f[:-1] < 0)[0][0]
-        print(f'Choosing j = {j}')
-        print('Now solve the system for y: ')
+
+        log(f'Choosing j = {j}')
+
         y_sysA = np.array(simplex_matrix[:-1, P])
         y_sysB = np.array(simplex_matrix[:-1, j])
-        print(y_sysA, y_sysB)
+
         y_sol = np.linalg.solve(y_sysA, y_sysB)
-        print(f'y = {y_sol}')
+        log(f'y = {y_sol}')
         y = np.zeros(simplex_n)
         y[P] = y_sol
-        print(f'y extended = {y}')
+        log(f'y extended = {y}')
 
-        print('------STEP 4-------')
+        log('------STEP 4-------')
         t_interval = portion.closed(-portion.inf, portion.inf)
         for i in P:
             left_side = y[i]
@@ -113,27 +116,25 @@ def canonical_simplex(simplex_matrix, Q, P, x0):
             t_interval &= c_interval
 
         if t_interval.upper < 0 or t_interval.upper == portion.inf:
-            print(f'Step 4 stop condition reached, function is unbounded')
+            log(f'Step 4 stop condition reached, function is unbounded')
             return None
         t = t_interval.upper
-        print(f'Choosing t = {t}')
+        log(f'Choosing t = {t}')
 
-        print('------STEP 5-------')
+        log('------STEP 5-------')
         s = None
         for s_candidate in P:
             if y[s_candidate] <= 0:
                 continue
-
-            # xs =
             if x0[s_candidate] - t*y[s_candidate] == 0:
                 s = s_candidate
                 break
 
         if s is None:
-            print(f'Step 5 - s not found, no solution (I guess?)')
+            log(f'Step 5 - s not found, no solution (I guess?)')
             return None
 
-        print(f'Choosing s = {s}')
+        log(f'Choosing s = {s}')
 
         x1 = np.zeros(len(x0))
         x1[j] = t
@@ -141,40 +142,24 @@ def canonical_simplex(simplex_matrix, Q, P, x0):
             x1[i] = x0[i] - t * y[i]
         newP = np.append(P[P != s], j)
         newQ = np.append(Q[Q != j], s)
-        print(f'x1 = {x1}')
-        print(f'new P = {newP}')
-        print(f'new Q = {newQ}')
+        log(f'x1 = {x1}')
+        log(f'new P = {newP}')
+        log(f'new Q = {newQ}')
 
         x0 = x1
         P = newP
         Q = newQ
 
-        simplex_matrix[:-1, s] = y_sol
-
-
-
-
 
 def test1():
-    c = [-1, -2]
-    A = [[1, 1,],
-         [-1, 3]]
+    A = [[1, 1],
+        [-1, 3]]
     b = [3, 5]
-
+    c = [-1, -2]
     s_matrix, Q, P, x0 = to_canonical(A, b, c)
     sol = canonical_simplex(s_matrix, Q, P, x0)
     print(sol)
 
 
-def test2():
-    A = [[1, -1, -1, 3, 1, 0, 0, 1],
-         [5, 1, 3, 8, 0, 1, 0, 55],
-         [-1, 2, 3, -5, 0, 0, 1, 4],
-         [-4, -1, -5, -3, 0, 0, 0, 0]]
-    x0 = [0, 0, 0, 0, 1, 55, 3]
-    P = [4, 5, 6]
-    Q = [0, 1, 2, 3]
-    sol = canonical_simplex(np.array(A), np.array(Q), np.array(P), np.array(x0))
-    print(sol)
-
 test1()
+
