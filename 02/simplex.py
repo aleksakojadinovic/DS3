@@ -17,6 +17,7 @@ def lexp_to_string(exp):
 def lineq_to_string(a, b, sign):
     return lexp_to_string(a) + ' ' + sign + ' ' + str(b)
 
+
 """This will look very bad when numbers are not nice"""
 def simplex_matrix_to_string(A):
     sep = '\t\t'
@@ -52,7 +53,7 @@ def to_canonical(A, b, c):
 
     return s_matrix, Q, P, np.append(np.zeros(s_matrix.shape[1] - len(b) - 1), b)
 
-def canonical_simplex(simplex_matrix, Q, P, x0):
+def canonical_simplex(simplex_matrix, Q, P, x0, eta=False):
     log('>>>>>>>>>>>>>>>>REVISED SIMPLEX ALGORITHM<<<<<<<<<<<<<<<<<<<<<<')
     iteration = 1
     while True:
@@ -65,9 +66,7 @@ def canonical_simplex(simplex_matrix, Q, P, x0):
 
         b = simplex_matrix[:-1, -1]
         c = simplex_matrix[-1:, :].flatten()
-        simplex_m, simplex_n = simplex_matrix.shape
-        num_basis = len(P)
-        num_non_basis = len(Q)
+        _, simplex_n = simplex_matrix.shape
 
         log('------STEP 1-------')
         u_sysA = np.array(simplex_matrix[:-1, P]).T
@@ -84,7 +83,8 @@ def canonical_simplex(simplex_matrix, Q, P, x0):
         log('------STEP 2-------')
         if (pure_f[:-1] >= 0).all():
             log(f'Step 2 stop condition reached, returning current x0')
-            return x0, np.dot(x0, c[:-1])
+            # TODO: What?
+            return np.around(x0, 13), np.round(np.dot(x0, c[:-1]), 13)
         log('Step 2 stop condition NOT reached, continue to step 3')
 
         log('------STEP 3-------')
@@ -158,8 +158,112 @@ def test1():
     c = [-1, -2]
     s_matrix, Q, P, x0 = to_canonical(A, b, c)
     sol = canonical_simplex(s_matrix, Q, P, x0)
-    print(sol)
+    print(list(sol[0]))
+    print(sol[1])
 
 
-test1()
+def test2():
+    A = [[1, -1, -1, 3],
+        [5, 1, 3, 8],
+        [-1, 2, 3, -5]]
+    b = [1, 55, 3]
+    c = [-4, -1, -5, -3]
+    s_matrix, Q, P, x0 = to_canonical(A, b, c)
+    sol = canonical_simplex(s_matrix, Q, P, x0, args.eta)
+    print(list(sol[0]))
+    print(sol[1])
+
+
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('-e', 
+                    '--eta',
+                     action='store_true',
+                     help='Whether to use ETA matrices')
+
+parser.add_argument('-g',
+                    '--greater',
+                    action='store_true',
+                    help='Use >= instead of <=')
+
+parser.add_argument('-m',
+                    '--max',
+                    action='store_true',
+                    help='Maximize instead of minimize')
+
+parser.add_argument('-i',
+                    '--input',
+                    help='The input file')
+
+parser.add_argument('-l',
+                    '--logging',
+                    action='store_true',
+                    help='Display log messages')
+
+def parse_error(msg=''):
+    print(f'Error parsing input file: {msg}',
+            'NOTE: Use following format:'
+            'M N',
+            'c1 c2 ... cn',
+            'a11 a12 ... a1n',
+            'a21 a22 ... a2n',
+            ' ... ',
+            'am1 am2 ... amn',
+            sep='\r\n'
+            )
+    sys.exit(1)
+
+
+def parse_dimensions(dim_line):
+    dims_strings = dim_line.split(' ')
+    if len(dims_strings) != 2:
+        parse_error(f'Expected two integers in the first line, got {dim_line}')
+
+    try:
+        m = int(dims_strings[0])
+        n = int(dims_strings[1])
+        return m, n
+    except:
+        parse_error(f'Expected two integers in the first line, got {dim_line}')
+
+def parse_target_function(target_function_line, n):
+    target_coeffs_strings = target_function_line.split(' ')
+    if len(target_coeffs_strings) != n:
+        parse_error(f'Expecting {n} target coefficients, got {len(target_coeffs_strings)}')
+    try:
+        coeffs = map(float, target_coeffs_strings)
+        return np.array(coeffs)
+    except:
+        parse_error(f'One or more of target coefficients is not a float.')
+    
+
+def parse_constraint_matrix(constraint_matrix_lines, m, n):
+    
+    pass
+    
+
+def fetch_input(file_name):
+    try:
+        input_file = open(file_name, "r")
+        lines = input_file.readlines()
+        lines = (line.strip() for line in lines)
+        lines = (line for line in lines if line)
+        lines = list(lines)
+        print(lines)
+        
+    except:
+        print('Failed to open input file.')
+        sys.exit(1)
+
+args = parser.parse_args()
+LOG = args.logging
+
+if args.input is None:
+    ans = input('No input file specified. Run default example? [y/n]: ')
+    if ans == 'y' or ans == 'Y':
+        test1()
+    sys.exit(0)
+
+fetch_input(args.input)
 
