@@ -29,184 +29,152 @@ def simplex_matrix_to_string(A):
     return row_markers + '\r\n' + row_split + '\r\n' + '\r\n'.join(rows[:-1]) + '\r\n' + row_split + '\r\n' + rows[-1]
 
 
-def get_simplex_matrix(A, b, c, Q, P):
-    m, n = A.shape
-    s_matrix = np.copy(A)
-    s_matrix = np.hstack((s_matrix, b.reshape(-1, 1)))
-    s_matrix = np.vstack((s_matrix, np.hstack((c, 0.0))))
-    return s_matrix
 
-def simplex(A, b, c, Q, P, x0):
-    if len(A) == 1:
-        A = np.array([A])
-    else:
-        A = np.array(A)
+"""Returns a tuple (simplex_matrix, Q, P, x0)"""
+
+def to_canonical(A, b, c):
+    # TODO: Optimize by allocating entire matrix once and then filling values with indexing
+    # TODO: Also this is probably incorrect since basis doesn't always have to be consisted
+    #       of the slack variables (I guess?) but I don't really get it :(
+    A = np.array(A)
     b = np.array(b)
     c = np.array(c)
-    P = np.array(P)
-    Q = np.array(Q)
-    x0 = np.array(x0)
+    m, n = A.shape
 
-    simplex_matrix = np.hstack((A, b.reshape(-1, 1)))
-    simplex_matrix = np.vstack((simplex_matrix, np.hstack((c, 0))))
-    print(simplex_matrix_to_string(simplex_matrix))
+    s_matrix = np.append(A, np.eye(m), axis=1)
+    s_matrix = np.vstack((s_matrix, np.append(c, np.zeros(s_matrix.shape[1] - n))))
+    s_matrix = np.hstack((s_matrix, np.append(b, 0).reshape(-1, 1)))
+    P = np.array(range(n, s_matrix.shape[1] - 1))
+    Q = np.array(range(n))
+    # TODO: Hardcoded for now until I figure it out
+    return s_matrix, Q, P, np.array([0, 0, 3, 5])
 
-    sm, sn = simplex_matrix.shape
+def canonical_simplex(simplex_matrix, Q, P, x0):
+    print('>>>>>>>>>>>>>>>>CANONICAL SIMPLEX ALGORITHM<<<<<<<<<<<<<<<<<<<<<<')
+    iteration = 1
     while True:
-        print('--STEP 1--')
-        ### STEP 1
-        # Transform target function f = \sum{c_px_p} + \sum{c_qx_q}
-        # find u = (u1, ..., um) such that
-        # ukp = c_p, p in P
-        # each column kp is A[:, p].reshape(-1, 1)
+        P = np.sort(P)
+        Q = np.sort(Q)
+        print(f'<<<Iteration {iteration}>>>')
+        print(simplex_matrix_to_string(simplex_matrix))
+        iteration += 1
+        print(f'P={P}, Q={Q}, x0={x0}')
 
-        u_sysA = np.array(simplex_matrix[:-1, P[0]]).reshape(-1, 1)
-        u_sysB = np.array(c[P[0]])
-        for p in P[1:]:
-            new_col = simplex_matrix[:-1, p].reshape(-1, 1)
-            u_sysA = np.hstack((u_sysA, new_col))
-            u_sysB = np.hstack((u_sysB, c[p]))
+        b = simplex_matrix[:-1, -1]
+        c = simplex_matrix[-1:, :].flatten()
+        simplex_m, simplex_n = simplex_matrix.shape
+        num_basis = len(P)
+        num_non_basis = len(Q)
 
+        print('------STEP 1-------')
+        u_sysA = np.array(simplex_matrix[:-1, P]).T
+        u_sysB = np.array(c[P])
+        print(f'Solving system for u with', u_sysA, u_sysB, sep='\r\n')
         u = np.linalg.solve(u_sysA, u_sysB)
-
         print(f'u = {u}')
 
-        # pure_f = np.array([c[q] - np.dot(u, A[:, q]) for q in Q] + [np.dot(u, b)])
-        pure_f = np.zeros(sn)
-        for i in range(sn):
-            if i in Q:
-                pure_f[i] = c[i] - np.dot(u, simplex_matrix[:-1, i])
-            elif i == sn - 1:
-                pure_f[i] = np.dot(u, b)
-            else:
-                pure_f[i] = 0
+        pure_f = np.zeros(simplex_n)
+        pure_f[-1] = np.dot(u, b)
+        for i in range(len(pure_f - 1)):
+            pure_f[i] = c[i] - np.dot(u, simplex_matrix[:-1, i]) if i in Q else 0
+        print(f'pure f = {pure_f}')
 
-        print(f'pure_f = {pure_f}')
+        print('------STEP 2-------')
+        if (pure_f[:-1] >= 0).all():
+            print(f'Step 2 stop condition reached, returning current x0')
+            return x0, np.dot(x0, c[:-1])
+        print('Step 2 stop condition NOT reached, continue to step 3')
 
-        print('--STEP 2--')
-        if (pure_f[Q] >= 0).all():
-            print(f'Step 2 stop condition reached, solution is x0 = {x0}')
-            return x0
-        print(f'Step 2 stop condition not reached, proceed to step3')
-
-        print('--STEP 3--')
-
-        j = np.where(pure_f[Q] < 0)[0][0]
+        print('------STEP 3-------')
+        j = np.where(pure_f[:-1] < 0)[0][0]
         print(f'Choosing j = {j}')
+        print('Now solve the system for y: ')
+        y_sysA = np.array(simplex_matrix[:-1, P])
+        y_sysB = np.array(simplex_matrix[:-1, j])
+        print(y_sysA, y_sysB)
+        y_sol = np.linalg.solve(y_sysA, y_sysB)
+        print(f'y = {y_sol}')
+        y = np.zeros(simplex_n)
+        y[P] = y_sol
+        print(f'y extended = {y}')
 
-        y_sysA = u_sysA
-        y_sysB = simplex_matrix[:-1, j]
-
-        y = np.linalg.solve(y_sysA, y_sysB)
-        print(f'y = {y}')
-
-        y_extended = np.zeros(sn)
-        at_p = 0
-        for i in range(sn):
-            if i in P:
-                y_extended[i] = y[at_p]
-                at_p += 1
-            else:
-                y_extended[i] = 0
-        print(f'\t\textended y={y_extended}')
-
-        print('--STEP 4 --')
-        T_interval = portion.closed(-portion.inf, portion.inf)
+        print('------STEP 4-------')
+        t_interval = portion.closed(-portion.inf, portion.inf)
         for i in P:
-            # we're looking for an expression of the form
-            # x0[i] - ty[i] >= 0
-            # transforms to:
-            # ty[i] <= x0[i]
-            # Now it all depends on the sign of y[i]
-            if y_extended[i] == 0: #division by zero
-                continue
-            left_side = y_extended[i]
+            left_side = y[i]
             right_side = x0[i]
-            if (left_side > 0 and right_side > 0) or (left_side < 0 and right_side < 0):
-                # Same signs, meaning t <= x0[i] / y[i]
-                t_current = portion.closed(-portion.inf, right_side/left_side)
-            else:
-                # different signs, meaning t >= x0[i] / y[i]
-                t_current = portion.closed(right_side/left_side, portion.inf)
-            T_interval = T_interval & t_current
-
-
-        if T_interval.upper == portion.inf or T_interval.upper < 0:
-            print(f'Step 4 condition - f unbounded!')
-            # maybe return None instead of this
-            return float('-inf')
-
-
-        t_star = T_interval.upper
-        print(f't_star = {t_star}')
-
-
-        print('--STEP 5--')
-        s_choice = None
-        for s in P:
-            if y_extended[s] <= 0:
+            if left_side == 0:
                 continue
-            expr = x0[s] - t_star * y_extended[s]
-            if expr == 0:
-                s_choice = s
+            if (left_side < 0 and right_side <= 0) or (left_side > 0 and right_side >= 0):
+                c_interval = portion.closed(-portion.inf, right_side/left_side)
+            else:
+                c_interval = portion.closed(right_side/left_side, portion.inf)
+
+            t_interval &= c_interval
+
+        if t_interval.upper < 0 or t_interval.upper == portion.inf:
+            print(f'Step 4 stop condition reached, function is unbounded')
+            return None
+        t = t_interval.upper
+        print(f'Choosing t = {t}')
+
+        print('------STEP 5-------')
+        s = None
+        for s_candidate in P:
+            if y[s_candidate] <= 0:
+                continue
+
+            # xs =
+            if x0[s_candidate] - t*y[s_candidate] == 0:
+                s = s_candidate
                 break
 
-        if s_choice is None:
-            print('EVO NE ZNAM BOGAMI')
+        if s is None:
+            print(f'Step 5 - s not found, no solution (I guess?)')
             return None
 
-        print(f'Choosing s={s_choice}')
+        print(f'Choosing s = {s}')
 
-        new_x = np.zeros(sn-1)
-        for i in range(len(new_x)):
-            if i in P and i != s_choice:
-                new_x[i] = x0[i] - t_star * y_extended[i]
-            elif i == j:
-                new_x[i] = t_star
-            else:
-                new_x[i] = 0
+        x1 = np.zeros(len(x0))
+        x1[j] = t
+        for i in P[P != s]:
+            x1[i] = x0[i] - t * y[i]
+        newP = np.append(P[P != s], j)
+        newQ = np.append(Q[Q != j], s)
+        print(f'x1 = {x1}')
+        print(f'new P = {newP}')
+        print(f'new Q = {newQ}')
 
-        print(f'new x = {new_x}')
-
-
-        newP = np.unique(np.hstack((P[P != s_choice], j)))
-        newQ = np.unique(np.hstack((Q[Q != j], s_choice)))
-        print(f'newP = {newP}')
-        print(f'newQ = {newQ}')
-
+        x0 = x1
         P = newP
         Q = newQ
-        x0 = new_x
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        simplex_matrix[:-1, s] = y_sol
 
 
 
 
 
 def test1():
-    c = [-1, -2, 0, 0]
-    A = [[1, 1, 1, 0],
-         [-1, 3, 0, 1]]
+    c = [-1, -2]
+    A = [[1, 1,],
+         [-1, 3]]
     b = [3, 5]
-    Q = [0, 1]
-    P = [2, 3]
-    x0 = [0, 0, 3, 5]
-    simplex(A, b, c, Q, P, x0)
 
+    s_matrix, Q, P, x0 = to_canonical(A, b, c)
+    sol = canonical_simplex(s_matrix, Q, P, x0)
+    print(sol)
+
+
+def test2():
+    A = [[1, -1, -1, 3, 1, 0, 0, 1],
+         [5, 1, 3, 8, 0, 1, 0, 55],
+         [-1, 2, 3, -5, 0, 0, 1, 4],
+         [-4, -1, -5, -3, 0, 0, 0, 0]]
+    x0 = [0, 0, 0, 0, 1, 55, 3]
+    P = [4, 5, 6]
+    Q = [0, 1, 2, 3]
+    sol = canonical_simplex(np.array(A), np.array(Q), np.array(P), np.array(x0))
+    print(sol)
 
 test1()
