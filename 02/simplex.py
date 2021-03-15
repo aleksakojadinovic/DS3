@@ -17,6 +17,18 @@ def lexp_to_string(exp):
 def lineq_to_string(a, b, sign):
     return lexp_to_string(a) + ' ' + sign + ' ' + str(b)
 
+def print_linear_programming_problem(A, b, c, is_max, is_greater):
+    sign = '>=' if is_greater else '<='
+    target_function_string = lexp_to_string(c)
+    constraints_string = '\r\n'.join(lineq_to_string(a, b, sign) for a, b in zip(A, b))
+
+    print('<<< PROBLEM >>>')
+    print('Maximize:' if is_max else 'Minimize:')
+    print(f'f = {target_function_string}')
+    print('Subject to constraints:')
+    print(constraints_string)
+    print('===============')
+
 
 """This will look very bad when numbers are not nice"""
 def simplex_matrix_to_string(A):
@@ -156,26 +168,11 @@ def test1():
         [-1, 3]]
     b = [3, 5]
     c = [-1, -2]
+    print_linear_programming_problem(A, b, c, False, False)
     s_matrix, Q, P, x0 = to_canonical(A, b, c)
     sol = canonical_simplex(s_matrix, Q, P, x0)
     print(list(sol[0]))
     print(sol[1])
-
-
-def test2():
-    A = [[1, -1, -1, 3],
-        [5, 1, 3, 8],
-        [-1, 2, 3, -5]]
-    b = [1, 55, 3]
-    c = [-4, -1, -5, -3]
-    s_matrix, Q, P, x0 = to_canonical(A, b, c)
-    sol = canonical_simplex(s_matrix, Q, P, x0, args.eta)
-    print(list(sol[0]))
-    print(sol[1])
-
-
-
-
 
 
 def parse_error(msg=''):
@@ -190,7 +187,6 @@ def parse_error(msg=''):
             sep='\r\n'
             )
     sys.exit(1)
-
 
 def parse_dimensions(dim_line):
     dims_strings = dim_line.split(' ')
@@ -214,7 +210,6 @@ def parse_target_function(target_function_line, n):
     except:
         parse_error(f'One or more of target coefficients is not a float.')
     
-
 def parse_constraint_matrix(constraint_matrix_lines, m, n):
     if len(constraint_matrix_lines) != m:
         parse_error(f'Expecting {m} lines in constraint matrix, got {len(constraint_matrix_lines)}')
@@ -293,16 +288,16 @@ args = parser.parse_args()
 LOG = args.logging
 
 if args.input is None:
-    ans = input('No input file specified. Run default example? [y/n]: ')
+    ans = input('No input file specified. Run debug example (other flags will be ignored)? [y/n]: ')
     if ans == 'y' or ans == 'Y':
         test1()
     sys.exit(0)
 
 
-
-
-
 A, b, c = fetch_input(args.input)
+
+if args.printproblem:
+    print_linear_programming_problem(A, b, c, args.max, args.greater)
 
 if args.max:
     c *= -1
