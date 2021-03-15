@@ -117,7 +117,7 @@ def canonical_simplex(simplex_matrix, Q, P, x0, eta=False):
 
         if t_interval.upper < 0 or t_interval.upper == portion.inf:
             log(f'Step 4 stop condition reached, function is unbounded')
-            return None
+            return None, None
         t = t_interval.upper
         log(f'Choosing t = {t}')
 
@@ -132,7 +132,7 @@ def canonical_simplex(simplex_matrix, Q, P, x0, eta=False):
 
         if s is None:
             log(f'Step 5 - s not found, no solution (I guess?)')
-            return None
+            return None, None
 
         log(f'Choosing s = {s}')
 
@@ -176,6 +176,89 @@ def test2():
 
 
 
+
+
+def parse_error(msg=''):
+    print(f'Error parsing input file: {msg}\r\n',
+            'NOTE: Use following format:'
+            'M N',
+            'c1 c2 ... cn',
+            'a11 a12 ... a1n b1',
+            'a21 a22 ... a2n b2',
+            ' ... ',
+            'am1 am2 ... amn bm',
+            sep='\r\n'
+            )
+    sys.exit(1)
+
+
+def parse_dimensions(dim_line):
+    dims_strings = dim_line.split(' ')
+    if len(dims_strings) != 2:
+        parse_error(f'Expected two integers in the first line, got `{dim_line}`')
+
+    try:
+        m = int(dims_strings[0])
+        n = int(dims_strings[1])
+        return m, n
+    except:
+        parse_error(f'Expected two integers in the first line, got {dim_line}')
+
+def parse_target_function(target_function_line, n):
+    target_coeffs_strings = target_function_line.split(' ')
+    if len(target_coeffs_strings) != n:
+        parse_error(f'Expecting {n} target coefficients, got {len(target_coeffs_strings)}')
+    try:
+        coeffs = list(map(float, target_coeffs_strings))
+        return np.array(coeffs)
+    except:
+        parse_error(f'One or more of target coefficients is not a float.')
+    
+
+def parse_constraint_matrix(constraint_matrix_lines, m, n):
+    if len(constraint_matrix_lines) != m:
+        parse_error(f'Expecting {m} lines in constraint matrix, got {len(constraint_matrix_lines)}')
+    matrix = np.zeros((m, n))
+    b_vector = np.zeros(m)
+    for i in range(m):
+        row = constraint_matrix_lines[i].split(' ')
+        if len(row) != n + 1:
+            parse_error(f'Expecting {n + 1} values per row in constraint matrix, but row {row} has {len(row)}')
+        for j, str_val in enumerate(row):
+            try:
+                float_val = float(str_val)
+                if j == n:
+                    b_vector[i] = float_val
+                else:
+                    matrix[i][j] = float_val
+            except:
+                parse_error(f'Non float in constraint matrix: {str_val}')
+    
+    return matrix, b_vector
+
+def parse_input(input_lines):
+    if len(input_lines) < 3:
+        parse_error(f'Expected 3 lines, got {len(input_lines)}')
+    
+    m, n = parse_dimensions(input_lines[0])
+    c = parse_target_function(input_lines[1], n)
+    A, b = parse_constraint_matrix(input_lines[2:], m, n)
+    return A, b, c
+
+
+def fetch_input(file_name):
+    try:
+        input_file = open(file_name, "r")
+        lines = input_file.readlines()
+        lines = (line.strip() for line in lines)
+        lines = (line for line in lines if line)
+        lines = list(lines)
+        return parse_input(lines) 
+    except:
+        print('Failed to open input file.')
+        sys.exit(1)
+
+
 parser = argparse.ArgumentParser()
 parser.add_argument('-e', 
                     '--eta',
@@ -199,62 +282,12 @@ parser.add_argument('-i',
 parser.add_argument('-l',
                     '--logging',
                     action='store_true',
-                    help='Display log messages')
+                    help='Display log messages throughout the algorithm')
 
-def parse_error(msg=''):
-    print(f'Error parsing input file: {msg}',
-            'NOTE: Use following format:'
-            'M N',
-            'c1 c2 ... cn',
-            'a11 a12 ... a1n',
-            'a21 a22 ... a2n',
-            ' ... ',
-            'am1 am2 ... amn',
-            sep='\r\n'
-            )
-    sys.exit(1)
-
-
-def parse_dimensions(dim_line):
-    dims_strings = dim_line.split(' ')
-    if len(dims_strings) != 2:
-        parse_error(f'Expected two integers in the first line, got {dim_line}')
-
-    try:
-        m = int(dims_strings[0])
-        n = int(dims_strings[1])
-        return m, n
-    except:
-        parse_error(f'Expected two integers in the first line, got {dim_line}')
-
-def parse_target_function(target_function_line, n):
-    target_coeffs_strings = target_function_line.split(' ')
-    if len(target_coeffs_strings) != n:
-        parse_error(f'Expecting {n} target coefficients, got {len(target_coeffs_strings)}')
-    try:
-        coeffs = map(float, target_coeffs_strings)
-        return np.array(coeffs)
-    except:
-        parse_error(f'One or more of target coefficients is not a float.')
-    
-
-def parse_constraint_matrix(constraint_matrix_lines, m, n):
-    
-    pass
-    
-
-def fetch_input(file_name):
-    try:
-        input_file = open(file_name, "r")
-        lines = input_file.readlines()
-        lines = (line.strip() for line in lines)
-        lines = (line for line in lines if line)
-        lines = list(lines)
-        print(lines)
-        
-    except:
-        print('Failed to open input file.')
-        sys.exit(1)
+parser.add_argument('-p',
+                    '--printproblem',
+                    action='store_true',
+                    help='Print a human readable representation of the problem first')
 
 args = parser.parse_args()
 LOG = args.logging
@@ -265,5 +298,26 @@ if args.input is None:
         test1()
     sys.exit(0)
 
-fetch_input(args.input)
+
+
+
+
+A, b, c = fetch_input(args.input)
+
+if args.max:
+    c *= -1
+
+if args.greater:
+    A *= -1
+    b *= -1
+
+simplex_matrix, Q, P, x0 = to_canonical(A, b, c)
+ex_x, ex_f = canonical_simplex(simplex_matrix, Q, P, x0)
+if LOG:
+    print('=================================================')
+if ex_x is None:
+    print(f'The function is unbounded (no solution).')
+else:
+    print('Maximum' if args.max else 'Minimum' , ':', ex_x)
+    print(f'Value: {ex_f}')
 
