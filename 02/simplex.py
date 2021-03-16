@@ -27,6 +27,7 @@ def print_linear_programming_problem(A, b, c, is_max, is_greater):
     print(f'f = {target_function_string}')
     print('Subject to constraints:')
     print(constraints_string)
+    print('x_i >= 0, for all i')
     print('===============')
 
 
@@ -49,8 +50,6 @@ def simplex_matrix_to_string(A):
 """Returns a tuple (simplex_matrix, Q, P, x0)"""
 def to_canonical(A, b, c):
     # TODO: Optimize by allocating entire matrix once and then filling values with indexing
-    # TODO: Also this is probably incorrect since basis doesn't always have to be consisted
-    #       of the slack variables (I guess?) but I don't really get it :(
     A = np.array(A)
     b = np.array(b)
     c = np.array(c)
@@ -61,13 +60,18 @@ def to_canonical(A, b, c):
     s_matrix = np.hstack((s_matrix, np.append(b, 0).reshape(-1, 1)))
     P = np.array(range(n, s_matrix.shape[1] - 1))
     Q = np.array(range(n))
-    # TODO: Hardcoded for now until I figure it out
+
 
     return s_matrix, Q, P, np.append(np.zeros(s_matrix.shape[1] - len(b) - 1), b)
+
+
 
 def canonical_simplex(simplex_matrix, Q, P, x0, eta=False):
     log('>>>>>>>>>>>>>>>>REVISED SIMPLEX ALGORITHM<<<<<<<<<<<<<<<<<<<<<<')
     iteration = 1
+    basis = None
+    if eta:
+        basis = np.eye(len(P))
     while True:
         P = np.sort(P)
         Q = np.sort(Q)
@@ -81,6 +85,7 @@ def canonical_simplex(simplex_matrix, Q, P, x0, eta=False):
         _, simplex_n = simplex_matrix.shape
 
         log('------STEP 1-------')
+
         u_sysA = np.array(simplex_matrix[:-1, P]).T
         u_sysB = np.array(c[P])
         u = np.linalg.solve(u_sysA, u_sysB)
@@ -274,18 +279,12 @@ parser.add_argument('-i',
                     '--input',
                     help='The input file')
 
-parser.add_argument('-l',
-                    '--logging',
-                    action='store_true',
-                    help='Display log messages throughout the algorithm')
-
 parser.add_argument('-p',
                     '--printproblem',
                     action='store_true',
                     help='Print a human readable representation of the problem first')
 
 args = parser.parse_args()
-LOG = args.logging
 
 if args.input is None:
     ans = input('No input file specified. Run debug example (other flags will be ignored)? [y/n]: ')
