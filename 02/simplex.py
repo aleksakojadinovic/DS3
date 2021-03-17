@@ -54,7 +54,6 @@ def to_canonical(A, b, c):
     P = np.array(range(n, s_matrix.shape[1] - 1))
     Q = np.array(range(n))
 
-
     return s_matrix, Q, P, np.append(np.zeros(s_matrix.shape[1] - len(b) - 1), b)
 
 
@@ -308,6 +307,8 @@ if args['greater']:
 
 simplex_matrix, Q, P, x0 = to_canonical(A, b, c)
 ex_x, ex_f = canonical_simplex(simplex_matrix, Q, P, x0, args)
+ex_f = -1*ex_f if args['max'] else ex_f
+
 if LOG:
     print('=================================================')
 if ex_x is None:
