@@ -1,5 +1,5 @@
 # Revised Simplex Algorithm
-__________________________________________
+
 Linear programming problem solver using Revised Simplex Algorithm.
 __________________________________________
 ### Usage:
