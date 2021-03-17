@@ -256,36 +256,52 @@ def fetch_input(file_name):
 
 
 parser = argparse.ArgumentParser()
+
+parser.add_argument('--format',
+                    action='store_true',
+                    help='Show the input file format')
+
+parser.add_argument('-i',
+                    '--input',
+                    help='The input file')
+
 parser.add_argument('-e', 
                     '--eta',
                      action='store_true',
                      help='Whether to use ETA matrices')
 
-parser.add_argument('-g',
-                    '--greater',
-                    action='store_true',
-                    help='Use >= instead of <=')
-
-parser.add_argument('-l',
-                    '--logging',
-                    action='store_true',
-                    help='Print log messages throughout the algorithm')
 
 parser.add_argument('-m',
                     '--max',
                     action='store_true',
                     help='Maximize instead of minimize')
 
-parser.add_argument('-i',
-                    '--input',
-                    help='The input file')
+
+parser.add_argument('-g',
+                    '--greater',
+                    action='store_true',
+                    help='Use >= instead of <=')
 
 parser.add_argument('-p',
                     '--printproblem',
                     action='store_true',
                     help='Print a human readable representation of the problem first')
 
+parser.add_argument('-l',
+                    '--logging',
+                    action='store_true',
+                    help='Print log messages throughout the algorithm')
+
+
+
+
+
 args = vars(parser.parse_args())
+
+if args['format']:
+    print(FILE_FORMAT_STRING)
+    sys.exit(0)
+
 LOG = args['logging']
 
 if args['input'] is None:
