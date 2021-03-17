@@ -5,6 +5,7 @@ import argparse
 import time
 
 LOG =  False
+DEC = 8
 
 FILE_FORMAT_STRING ='\r\n'.join(['M N',
                                 'c1 c2 ... cn',
@@ -102,7 +103,7 @@ def canonical_simplex(simplex_matrix, Q, P, x0, flags):
             pure_f[i] = c[i] - np.dot(u, simplex_matrix[:-1, i]) if i in Q else 0
         
         if (pure_f[:-1] >= 0).all():
-            return np.around(x0, 13)[:-simplex_m + 1], np.round(np.dot(x0, c[:-1]), 13)
+            return np.around(x0, DEC)[:-simplex_m + 1], np.round(np.dot(x0, c[:-1]), DEC)
 
         j = np.where(pure_f[:-1] < 0)[0][0]        
         if eta:
