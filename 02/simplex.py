@@ -316,4 +316,3 @@ if ex_x is None:
 else:
     print('Maximum point' if args['max'] else 'Minimum point' , ':', ex_x)
     print(f'Maximum value' if args['max'] else 'Minimum value', ':', ex_f)
-
