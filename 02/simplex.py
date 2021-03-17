@@ -2,12 +2,14 @@ import numpy as np
 import portion
 import sys
 import argparse
+import time
 
 LOG = True
 
 def log(*args, **kwargs):
     if LOG:
         print(*args, **kwargs)
+
 
 
 """Linear expression to string"""
@@ -66,59 +68,61 @@ def to_canonical(A, b, c):
 
 
 
-def canonical_simplex(simplex_matrix, Q, P, x0, eta=False):
-    log('>>>>>>>>>>>>>>>>REVISED SIMPLEX ALGORITHM<<<<<<<<<<<<<<<<<<<<<<')
-    iteration = 1
-    basis = None
+def canonical_simplex(simplex_matrix, Q, P, x0, flags):
+    eta = flags['eta']
     if eta:
-        basis = np.eye(len(P))
+        log('>>>>>>>>>>>>>>>>REVISED SIMPLEX ALGORITHM (ETA)<<<<<<<<<<<<<<<<<<<<<<')
+    else:
+        log('>>>>>>>>>>>>>>>>REVISED SIMPLEX ALGORITHM<<<<<<<<<<<<<<<<<<<<<<')
+    
+    iteration = 1
+    
+    simplex_m, simplex_n = simplex_matrix.shape
+
+    b = simplex_matrix[:-1, -1]
+    c = simplex_matrix[-1:, :].flatten()
+
+    current_basis_matrix = None
+    if eta:
+        current_basis_matrix = np.eye(len(P))
+        eta_matrix = np.eye(len(P))
+
     while True:
-        P = np.sort(P)
-        Q = np.sort(Q)
-        log(f'<<<Iteration {iteration}>>>')
-        log(simplex_matrix_to_string(simplex_matrix))
+        log(f'<<<<<<<<<<<<<<<<<<<<Iteration {iteration}>>>>>>>>>>>>>>>>>>>>>')
         iteration += 1
+
         log(f'P={P}, Q={Q}, x0={x0}')
+        if eta:
+            log('Basis matrix: ')
+            log(current_basis_matrix)
 
-        b = simplex_matrix[:-1, -1]
-        c = simplex_matrix[-1:, :].flatten()
-        _, simplex_n = simplex_matrix.shape
+        if eta:
+            u = np.linalg.solve(current_basis_matrix.T, c[P])
+        else:
+            u = np.linalg.solve(simplex_matrix[:-1, P].T, c[P])
 
-        log('------STEP 1-------')
-
-        u_sysA = np.array(simplex_matrix[:-1, P]).T
-        u_sysB = np.array(c[P])
-        u = np.linalg.solve(u_sysA, u_sysB)
         log(f'u = {u}')
 
         pure_f = np.zeros(simplex_n)
         pure_f[-1] = np.dot(u, b)
-        for i in range(len(pure_f - 1)):
+        
+        for i in range(len(pure_f) - 1):
             pure_f[i] = c[i] - np.dot(u, simplex_matrix[:-1, i]) if i in Q else 0
-        log(f'pure f = {pure_f}')
-
-        log('------STEP 2-------')
+        
         if (pure_f[:-1] >= 0).all():
-            log(f'Step 2 stop condition reached, returning current x0')
-            # TODO: What?
-            return np.around(x0, 13), np.round(np.dot(x0, c[:-1]), 13)
-        log('Step 2 stop condition NOT reached, continue to step 3')
+            return np.around(x0, 13)[:-simplex_m + 1], np.round(np.dot(x0, c[:-1]), 13)
 
-        log('------STEP 3-------')
         j = np.where(pure_f[:-1] < 0)[0][0]
-
-        log(f'Choosing j = {j}')
-
-        y_sysA = np.array(simplex_matrix[:-1, P])
         y_sysB = np.array(simplex_matrix[:-1, j])
-
-        y_sol = np.linalg.solve(y_sysA, y_sysB)
-        log(f'y = {y_sol}')
+        
+        if eta:
+            y_sol = np.linalg.solve(current_basis_matrix, y_sysB)
+        else:
+            y_sol = np.linalg.solve(np.array(simplex_matrix[:-1, P]), y_sysB)
         y = np.zeros(simplex_n)
         y[P] = y_sol
-        log(f'y extended = {y}')
+        log(f'y = {y_sol}')
 
-        log('------STEP 4-------')
         t_interval = portion.closed(-portion.inf, portion.inf)
         for i in P:
             left_side = y[i]
@@ -133,12 +137,10 @@ def canonical_simplex(simplex_matrix, Q, P, x0, eta=False):
             t_interval &= c_interval
 
         if t_interval.upper < 0 or t_interval.upper == portion.inf:
-            log(f'Step 4 stop condition reached, function is unbounded')
             return None, None
         t = t_interval.upper
-        log(f'Choosing t = {t}')
+        log(f't = {t}')
 
-        log('------STEP 5-------')
         s = None
         for s_candidate in P:
             if y[s_candidate] <= 0:
@@ -146,26 +148,33 @@ def canonical_simplex(simplex_matrix, Q, P, x0, eta=False):
             if x0[s_candidate] - t*y[s_candidate] == 0:
                 s = s_candidate
                 break
-
+        
         if s is None:
-            log(f'Step 5 - s not found, no solution (I guess?)')
             return None, None
 
-        log(f'Choosing s = {s}')
+        log(f's = {s}')
 
         x1 = np.zeros(len(x0))
         x1[j] = t
         for i in P[P != s]:
             x1[i] = x0[i] - t * y[i]
-        newP = np.append(P[P != s], j)
+        
+
         newQ = np.append(Q[Q != j], s)
-        log(f'x1 = {x1}')
-        log(f'new P = {newP}')
-        log(f'new Q = {newQ}')
+        newP = np.where(P == s, j, P)
+
+        if eta:
+            eta_matrix = np.eye(len(P))
+            actual_s_index = np.where(P == s)[0][0]
+            eta_matrix[:, actual_s_index] = y_sol
+            log('eta=')
+            log(eta_matrix)                      
+            current_basis_matrix = current_basis_matrix @ eta_matrix
 
         x0 = x1
         P = newP
         Q = newQ
+
 
 
 def test1():
@@ -178,7 +187,6 @@ def test1():
     sol = canonical_simplex(s_matrix, Q, P, x0)
     print(list(sol[0]))
     print(sol[1])
-
 
 def parse_error(msg=''):
     print(f'Error parsing input file: {msg}\r\n',
@@ -245,7 +253,6 @@ def parse_input(input_lines):
     A, b = parse_constraint_matrix(input_lines[2:], m, n)
     return A, b, c
 
-
 def fetch_input(file_name):
     try:
         input_file = open(file_name, "r")
@@ -284,34 +291,36 @@ parser.add_argument('-p',
                     action='store_true',
                     help='Print a human readable representation of the problem first')
 
-args = parser.parse_args()
+args = vars(parser.parse_args())
 
-if args.input is None:
+
+if args['input'] is None:
     ans = input('No input file specified. Run debug example (other flags will be ignored)? [y/n]: ')
     if ans == 'y' or ans == 'Y':
         test1()
     sys.exit(0)
 
 
-A, b, c = fetch_input(args.input)
+A, b, c = fetch_input(args['input'])
 
-if args.printproblem:
-    print_linear_programming_problem(A, b, c, args.max, args.greater)
+if args['printproblem']:
+    print_linear_programming_problem(A, b, c, args['max'], args['greater'])
 
-if args.max:
+if args['max']:
     c *= -1
 
-if args.greater:
+if args['greater']:
     A *= -1
     b *= -1
 
+
 simplex_matrix, Q, P, x0 = to_canonical(A, b, c)
-ex_x, ex_f = canonical_simplex(simplex_matrix, Q, P, x0)
+ex_x, ex_f = canonical_simplex(simplex_matrix, Q, P, x0, args)
 if LOG:
     print('=================================================')
 if ex_x is None:
     print(f'The function is unbounded (no solution).')
 else:
-    print('Maximum' if args.max else 'Minimum' , ':', ex_x)
-    print(f'Value: {ex_f}')
+    print('Maximum point' if args['max'] else 'Minimum point' , ':', ex_x)
+    print(f'Maximum value' if args['max'] else 'Minimum value', ':', ex_f)
 
