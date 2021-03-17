@@ -4,12 +4,18 @@ import sys
 import argparse
 import time
 
-LOG = True
+LOG =  False
+
+FILE_FORMAT_STRING ='\r\n'.join(['M N',
+                                'c1 c2 ... cn',
+                                'a11 a12 ... a1n b1',
+                                'a21 a22 ... a2n b2',
+                                ' ... ',
+                                'am1 am2 ... amn bm'])
 
 def log(*args, **kwargs):
     if LOG:
         print(*args, **kwargs)
-
 
 
 """Linear expression to string"""
@@ -71,9 +77,9 @@ def to_canonical(A, b, c):
 def canonical_simplex(simplex_matrix, Q, P, x0, flags):
     eta = flags['eta']
     if eta:
-        log('>>>>>>>>>>>>>>>>REVISED SIMPLEX ALGORITHM (ETA)<<<<<<<<<<<<<<<<<<<<<<')
+        log('>> Starting Revised Simplex Algorithm.')
     else:
-        log('>>>>>>>>>>>>>>>>REVISED SIMPLEX ALGORITHM<<<<<<<<<<<<<<<<<<<<<<')
+        log('>> Starting Revised Simplex Algorithm with ETA matrices.')
     
     iteration = 1
     
@@ -88,13 +94,16 @@ def canonical_simplex(simplex_matrix, Q, P, x0, flags):
         eta_matrix = np.eye(len(P))
 
     while True:
-        log(f'<<<<<<<<<<<<<<<<<<<<Iteration {iteration}>>>>>>>>>>>>>>>>>>>>>')
+        log(f'****** ITERATION {iteration}')
         iteration += 1
 
-        log(f'P={P}, Q={Q}, x0={x0}')
+        log(f'Data: P={P}, Q={Q}, x0={x0}')
+
         if eta:
             log('Basis matrix: ')
             log(current_basis_matrix)
+
+        log('--------------------------------------------------------')
 
         if eta:
             u = np.linalg.solve(current_basis_matrix.T, c[P])
@@ -112,13 +121,11 @@ def canonical_simplex(simplex_matrix, Q, P, x0, flags):
         if (pure_f[:-1] >= 0).all():
             return np.around(x0, 13)[:-simplex_m + 1], np.round(np.dot(x0, c[:-1]), 13)
 
-        j = np.where(pure_f[:-1] < 0)[0][0]
-        y_sysB = np.array(simplex_matrix[:-1, j])
-        
+        j = np.where(pure_f[:-1] < 0)[0][0]        
         if eta:
-            y_sol = np.linalg.solve(current_basis_matrix, y_sysB)
+            y_sol = np.linalg.solve(current_basis_matrix, simplex_matrix[:-1, j])
         else:
-            y_sol = np.linalg.solve(np.array(simplex_matrix[:-1, P]), y_sysB)
+            y_sol = np.linalg.solve(np.array(simplex_matrix[:-1, P]), simplex_matrix[:-1, j])
         y = np.zeros(simplex_n)
         y[P] = y_sol
         log(f'y = {y_sol}')
@@ -176,30 +183,12 @@ def canonical_simplex(simplex_matrix, Q, P, x0, flags):
         Q = newQ
 
 
-
-def test1():
-    A = [[1, 1],
-        [-1, 3]]
-    b = [3, 5]
-    c = [-1, -2]
-    print_linear_programming_problem(A, b, c, False, False)
-    s_matrix, Q, P, x0 = to_canonical(A, b, c)
-    sol = canonical_simplex(s_matrix, Q, P, x0)
-    print(list(sol[0]))
-    print(sol[1])
-
 def parse_error(msg=''):
     print(f'Error parsing input file: {msg}\r\n',
-            'NOTE: Use following format:'
-            'M N',
-            'c1 c2 ... cn',
-            'a11 a12 ... a1n b1',
-            'a21 a22 ... a2n b2',
-            ' ... ',
-            'am1 am2 ... amn bm',
+            'NOTE:',
+            FILE_FORMAT_STRING,
             sep='\r\n'
             )
-    sys.exit(1)
 
 def parse_dimensions(dim_line):
     dims_strings = dim_line.split(' ')
@@ -277,6 +266,11 @@ parser.add_argument('-g',
                     action='store_true',
                     help='Use >= instead of <=')
 
+parser.add_argument('-l',
+                    '--logging',
+                    action='store_true',
+                    help='Print log messages throughout the algorithm')
+
 parser.add_argument('-m',
                     '--max',
                     action='store_true',
@@ -292,13 +286,11 @@ parser.add_argument('-p',
                     help='Print a human readable representation of the problem first')
 
 args = vars(parser.parse_args())
-
+LOG = args['logging']
 
 if args['input'] is None:
-    ans = input('No input file specified. Run debug example (other flags will be ignored)? [y/n]: ')
-    if ans == 'y' or ans == 'Y':
-        test1()
-    sys.exit(0)
+    print('No input file specified.')
+    sys.exit(1)
 
 
 A, b, c = fetch_input(args['input'])
