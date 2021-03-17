@@ -39,22 +39,6 @@ def print_linear_programming_problem(A, b, c, is_max, is_greater):
     print('===============')
 
 
-"""This will look very bad when numbers are not nice"""
-def simplex_matrix_to_string(A):
-    sep = '\t\t'
-    sep2 = '\t\t\t'
-    row_markers = sep2.join(f'x_{i}' for i, _ in enumerate(A[0][:-1]))
-    row_markers += sep2 + '|b'
-    row_split = '-'*len(row_markers)*2
-    rows = []
-    for row in A:
-        regular_values = sep.join("{:.2f}".format(val) for val in row[:-1])
-        rows.append(regular_values + sep + '|' + "{:.2f}".format(row[-1]))
-
-    return row_markers + '\r\n' + row_split + '\r\n' + '\r\n'.join(rows[:-1]) + '\r\n' + row_split + '\r\n' + rows[-1]
-
-
-
 """Returns a tuple (simplex_matrix, Q, P, x0)"""
 def to_canonical(A, b, c):
     # TODO: Optimize by allocating entire matrix once and then filling values with indexing
@@ -91,7 +75,6 @@ def canonical_simplex(simplex_matrix, Q, P, x0, flags):
     current_basis_matrix = None
     if eta:
         current_basis_matrix = np.eye(len(P))
-        eta_matrix = np.eye(len(P))
 
     while True:
         log(f'****** ITERATION {iteration}')
