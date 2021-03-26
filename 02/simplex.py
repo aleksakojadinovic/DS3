@@ -2,7 +2,6 @@ import numpy as np
 import portion
 import sys
 import argparse
-import time
 
 LOG =  False
 DEC = 8
@@ -59,11 +58,12 @@ def to_canonical(A, b, c):
 
 
 def canonical_simplex(simplex_matrix, Q, P, x0, flags):
+    
     eta = flags['eta']
     if eta:
-        log('>> Starting Revised Simplex Algorithm.')
-    else:
         log('>> Starting Revised Simplex Algorithm with ETA matrices.')
+    else:
+        log('>> Starting Revised Simplex Algorithm')
     
     iteration = 1
     
@@ -100,9 +100,11 @@ def canonical_simplex(simplex_matrix, Q, P, x0, flags):
         
         for i in range(len(pure_f) - 1):
             pure_f[i] = c[i] - np.dot(u, simplex_matrix[:-1, i]) if i in Q else 0
-        
         if (pure_f[:-1] >= 0).all():
-            return np.around(x0, DEC)[:-simplex_m + 1], np.round(np.dot(x0, c[:-1]), DEC)
+            if not flags['canon']:
+                return np.around(x0, DEC)[:-simplex_m + 1], np.round(np.dot(x0, c[:-1]), DEC)
+            else:
+                return np.around(x0, DEC), np.round(np.dot(x0, c[:-1]), DEC)
 
         j = np.where(pure_f[:-1] < 0)[0][0]        
         if eta:
@@ -237,6 +239,43 @@ def fetch_input(file_name):
         print('Failed to open input file.')
         sys.exit(1)
 
+def parse_canon(file_name):
+    input_file = open(file_name, "r")
+    lines = input_file.readlines()
+    lines = (line.strip() for line in lines)
+    lines = (line for line in lines if line)
+    lines = list(lines)
+
+
+    
+    n = int(lines[0].split(" ")[0])
+    m = int(lines[0].split(" ")[1])
+
+    target_function = np.array(list(map(float, lines[1].split(" "))))
+
+    loaded_simplex_matrix = np.zeros((m, n))
+    for i, line in enumerate(lines[2:2+m]):
+        for j, val in enumerate(line.split(" ")):
+            loaded_simplex_matrix[i][j] = float(val)
+
+    b = np.array(list(map(float, lines[2+m].split(" ")))).reshape(-1, 1)
+    loaded_simplex_matrix = np.append(loaded_simplex_matrix, b, axis=1)
+    loaded_simplex_matrix = np.vstack((loaded_simplex_matrix, np.append(target_function, [0])))
+    
+    actual_n = n - m
+    actual_m = m
+
+    P = np.array(range(actual_n, loaded_simplex_matrix.shape[1] - 1))
+    Q = np.array(range(actual_n))
+    x0 = np.append(np.zeros(loaded_simplex_matrix.shape[1] - len(b) - 1), b)
+    return loaded_simplex_matrix, Q, P, x0
+    
+
+
+
+
+
+
 
 parser = argparse.ArgumentParser()
 
@@ -275,6 +314,12 @@ parser.add_argument('-l',
                     action='store_true',
                     help='Print log messages throughout the algorithm')
 
+parser.add_argument('-c',
+                    '--canon',
+                    action='store_true',
+                    help='Use canonical shape')
+
+
 
 
 
@@ -292,7 +337,20 @@ if args['input'] is None:
     sys.exit(1)
 
 
+if args['canon']:
+    sm, Q, P, x0 = parse_canon(args['input'])
+    min_x, min_val = canonical_simplex(sm, Q, P, x0, args)
+    if min_x is None:
+        print(f'No solution.')
+    print(f'Minimum point: {list(min_x)}')
+    print(f'Minimum value: {min_val}')
+
+    
+
+    sys.exit(0)
+
 A, b, c = fetch_input(args['input'])
+
 
 if args['printproblem']:
     print_linear_programming_problem(A, b, c, args['max'], args['greater'])
