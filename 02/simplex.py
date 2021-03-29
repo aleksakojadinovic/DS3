@@ -257,7 +257,7 @@ def parse_canon(file_name):
     for i, line in enumerate(lines[2:2+m]):
         for j, val in enumerate(line.split(" ")):
             loaded_simplex_matrix[i][j] = float(val)
-
+ 
     b = np.array(list(map(float, lines[2+m].split(" ")))).reshape(-1, 1)
     loaded_simplex_matrix = np.append(loaded_simplex_matrix, b, axis=1)
     loaded_simplex_matrix = np.vstack((loaded_simplex_matrix, np.append(target_function, [0])))
