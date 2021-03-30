@@ -14,7 +14,7 @@ f - Target function c0, ... c_{n-1}
 A - m x n constraint matrix
 b - right side vector
 """
-def dual_simplex(simplex_matrix):
+def dual_simplex(simplex_matrix, gimme_matrix=False):
     simplex_matrix = np.array(simplex_matrix, dtype='float64')
     canon_m, canon_n = simplex_matrix.shape
     m = canon_m - 1
@@ -31,7 +31,10 @@ def dual_simplex(simplex_matrix):
         
         if (b >= 0).all():
             log(f'\t All bs are positive, optimal found.')
-            return None, np.round(-simplex_matrix[-1, -1], DEC)
+            if gimme_matrix:
+                return None, np.round(-simplex_matrix[-1, -1], DEC), simplex_matrix
+            else:
+                return None, np.round(-simplex_matrix[-1, -1], DEC)
         
         neg_indices = np.argwhere(b < 0).T[0]
         log(f'Neg indices: {neg_indices}')
@@ -39,7 +42,10 @@ def dual_simplex(simplex_matrix):
         log('---K2')
         if np.apply_along_axis(np.all, 1, A[neg_indices]).any():
             log(f'\t Found positive row, no solution.')
-            return None, None
+            if gimme_matrix:
+                return None, None, simplex_matrix
+            else:
+                return None, None
                 
         log('No positive column found, continue to K3.')
 
@@ -61,7 +67,10 @@ def dual_simplex(simplex_matrix):
 
         if r is None:
             log(f"\t Couldn't find r_max, no solution.")
-            return None, None
+            if gimme_matrix:
+                return None, None, simplex_matrix
+            else:
+                return None, None
 
 
         log(f'r = {r} with Asr = {simplex_matrix[s][r]}')
