@@ -2,11 +2,11 @@ import numpy as np
 import lp_input_parser as lpp
 import argparse
 
-LOG = True
+duLOG = False
 DEC = 8
 
-def log(*args, **kwargs):
-    if LOG:
+def dslog(*args, **kwargs):
+    if duLOG:
         print(*args, **kwargs)
 
 """
@@ -20,39 +20,39 @@ def dual_simplex(simplex_matrix, gimme_matrix=False):
     m = canon_m - 1
     n = canon_n - 1
     
-    log('<<<<<<<<<<<<<<<<<<< STARTING DUAL SIMPLEX ALGORITHM >>>>>>>>>>>>>>>>>>>')
+    dslog('<<<<<<<<<<<<<<<<<<< STARTING DUAL SIMPLEX ALGORITHM >>>>>>>>>>>>>>>>>>>')
     k = 0
     while True:
         A = simplex_matrix[:-1, :-1]
         b = simplex_matrix[:-1, -1]
         c = simplex_matrix[-1, :-1]
-        log(f'*****Iteration {k}')
-        log('---K1')
+        dslog(f'*****Iteration {k}')
+        dslog('---K1')
         
         if (b >= 0).all():
-            log(f'\t All bs are positive, optimal found.')
+            dslog(f'\t All bs are positive, optimal found.')
             if gimme_matrix:
                 return None, np.round(-simplex_matrix[-1, -1], DEC), simplex_matrix
             else:
                 return None, np.round(-simplex_matrix[-1, -1], DEC)
         
         neg_indices = np.argwhere(b < 0).T[0]
-        log(f'Neg indices: {neg_indices}')
+        dslog(f'Neg indices: {neg_indices}')
 
-        log('---K2')
+        dslog('---K2')
         if np.apply_along_axis(np.all, 1, A[neg_indices]).any():
-            log(f'\t Found positive row, no solution.')
+            dslog(f'\t Found positive row, no solution.')
             if gimme_matrix:
                 return None, None, simplex_matrix
             else:
                 return None, None
                 
-        log('No positive column found, continue to K3.')
+        dslog('No positive column found, continue to K3.')
 
-        log('---K3')
+        dslog('---K3')
         # TODO: Add Blend flag 
         s = neg_indices[-1]
-        log(f'Choosing s = {s}')
+        dslog(f'Choosing s = {s}')
         # Now find 
         # max over r of {cr / A_sr such that Asr > 0}
         r = None
@@ -66,16 +66,16 @@ def dual_simplex(simplex_matrix, gimme_matrix=False):
                 r_max_val = val
 
         if r is None:
-            log(f"\t Couldn't find r_max, no solution.")
+            dslog(f"\t Couldn't find r_max, no solution.")
             if gimme_matrix:
                 return None, None, simplex_matrix
             else:
                 return None, None
 
 
-        log(f'r = {r} with Asr = {simplex_matrix[s][r]}')
+        dslog(f'r = {r} with Asr = {simplex_matrix[s][r]}')
 
-        log('---K4')
+        dslog('---K4')
      
         # Here we include the last one
         for i in range(canon_m):
@@ -86,16 +86,16 @@ def dual_simplex(simplex_matrix, gimme_matrix=False):
             simplex_matrix[i] = new_row
 
         simplex_matrix[s] = simplex_matrix[s] / simplex_matrix[s][r]
-        log('Updated simplex matrix to: ')
-        log(simplex_matrix)
+        dslog('Updated simplex matrix to: ')
+        dslog(simplex_matrix)
         k = k + 1
 
+if __name__ == '__main__':
+    arg_parser = lpp.get_simplex_parser()
+    args = vars(arg_parser.parse_args())
+    duLOG = args['logging']
+    smatrix, _ = lpp.prepare_for_algorithm(args)
 
-arg_parser = lpp.get_simplex_parser()
-args = vars(arg_parser.parse_args())
-LOG = args['logging']
-smatrix, _ = lpp.prepare_for_algorithm(args)
-
-x, v = dual_simplex(smatrix)
-lpp.print_solution(args, x, v)
+    x, v = dual_simplex(smatrix)
+    lpp.print_solution(args, x, v)
 
