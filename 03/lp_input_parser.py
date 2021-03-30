@@ -157,13 +157,15 @@ so this function takes care of every possible flag
 """
 def prepare_for_algorithm(run_flags):
     lines = read_lines_ds(run_flags['input'])
+    if run_flags['format'] not in ['simplex_matrix', 'constraints']:
+        print(f"WARNING: Unknown format: `{run_flags['format']}`, expecting either 'constraints' or 'simplex_matrix'. Switching to default.")
+        run_flags['format'] = 'simplex_matrix'
     if run_flags['format'] == 'constraints':
         A, b, c = parse_full_constraint(lines)
         simplex_matrix = abc_to_simplex_matrix(A, b, c)
     elif run_flags['format'] == 'simplex_matrix':
         simplex_matrix = parse_full_canonical(lines)
-    else:
-        print(f"Unknown format: {run_flags['format']}, expecting either 'constraints' or 'simplex_matrix'")
+        
     
     if run_flags['maximize']:
         simplex_matrix[:-1] *= -1
@@ -202,8 +204,10 @@ def get_simplex_parser():
 
 
 def print_solution(run_flags, x, val):
-    target = 'Max' if run_flags['maximize'] else 'Min'
     if run_flags['logging']:
         print('<<<<<<<<<<SOLUTION>>>>>>>>>>')
+    if val is None:
+        print('No solution.')
+    target = 'Max' if run_flags['maximize'] else 'Min'
     print(f'{target} point: {x}')
     print(f'{target} value: {val}')
