@@ -1,6 +1,9 @@
 import numpy as np
+import lp_input_parser as lpp
+import argparse
 
 LOG = True
+DEC = 8
 
 def log(*args, **kwargs):
     if LOG:
@@ -17,9 +20,6 @@ def dual_simplex(simplex_matrix):
     m = canon_m - 1
     n = canon_n - 1
     
-    print('simplex_matrix: ')
-    print(simplex_matrix)
-
     k = 0
     while True:
         A = simplex_matrix[:-1, :-1]
@@ -27,24 +27,25 @@ def dual_simplex(simplex_matrix):
         c = simplex_matrix[-1, :-1]
         log(f'*****Iteration {k}')
         log('---K1')
+        
         if (b >= 0).all():
             log(f'\t All bs are positive, optimal found.')
-            return None, -simplex_matrix[-1, -1]
+            return None, np.round(-simplex_matrix[-1, -1], DEC)
         
         neg_indices = np.argwhere(b < 0).T[0]
         log(f'Neg indices: {neg_indices}')
 
         log('---K2')
-        for i in neg_indices:        
-            if (A[i] >= 0).all():
-                log(f'\t Found positive row {A[i]} for i={i}')
-                return None, None
+        if np.apply_along_axis(np.all, 1, A[neg_indices]).any():
+            log(f'\t Found positive row, no solution.')
+            return None, None
+                
         log('No positive column found, continue to K3.')
 
         log('---K3')
         # TODO: Add Blend flag 
-        s = neg_indices[0]
-        log(f'Choosing s = {s} applying Blend rule.')
+        s = neg_indices[-1]
+        log(f'Choosing s = {s}')
         # Now find 
         # max over r of {cr / A_sr such that Asr > 0}
         r = None
@@ -66,7 +67,6 @@ def dual_simplex(simplex_matrix):
 
         log('---K4')
      
-        
         # Here we include the last one
         for i in range(canon_m):
             if i == s or simplex_matrix[i][r] == 0:
@@ -80,10 +80,11 @@ def dual_simplex(simplex_matrix):
         log(simplex_matrix)
         k = k + 1
 
-smatrix = [[-2, 1, 1, 1, 0, 0, 0],
-           [-1, -2, -1, 0, 1, 0, -3],
-           [1, -1, 2, 0, 0, 1, -4],
-           [7, 4, 1, 0, 0, 0, 0]]
 
-_, v = dual_simplex(smatrix)
-print(np.round(v, 8))
+arg_parser = lpp.get_simplex_parser()
+args = vars(arg_parser.parse_args())
+LOG = args['logging']
+smatrix, _ = lpp.prepare_for_algorithm(args)
+x, v = dual_simplex(smatrix)
+lpp.print_solution(args, x, v)
+
