@@ -20,6 +20,7 @@ def dual_simplex(simplex_matrix):
     m = canon_m - 1
     n = canon_n - 1
     
+    log('<<<<<<<<<<<<<<<<<<< STARTING DUAL SIMPLEX ALGORITHM >>>>>>>>>>>>>>>>>>>')
     k = 0
     while True:
         A = simplex_matrix[:-1, :-1]
@@ -85,6 +86,7 @@ arg_parser = lpp.get_simplex_parser()
 args = vars(arg_parser.parse_args())
 LOG = args['logging']
 smatrix, _ = lpp.prepare_for_algorithm(args)
+
 x, v = dual_simplex(smatrix)
 lpp.print_solution(args, x, v)
 

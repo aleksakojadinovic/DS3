@@ -8,11 +8,14 @@ def fatal_parse_error(msg):
     sys.exit(1)
     
 def read_lines_ds(filepath):
-    lines = open(filepath, "r").readlines()
-    lines = (line.strip() for line in lines)
-    lines = (line for line in lines if line)
-    lines = list(lines)
-    return lines
+    try:
+        lines = open(filepath, "r").readlines()
+        lines = (line.strip() for line in lines)
+        lines = (line for line in lines if line)
+        lines = list(lines)
+        return lines
+    except:
+        fatal_parse_error(f"Couldn't open file: {filepath}")
 
 def parse_n_of(n, line, type_func, type_name):
     if n <= 0:
@@ -47,7 +50,7 @@ def parse_matrix_dimensions(line):
 def parse_mn_matrix(m, n, lines):
     if m <= 0 or n <= 0:
         fatal_parse_error(f'Invalid dimensions: {m} x {n}.')
-    if len(lines) != m:
+    if len(lines) != m: 
         fatal_parse_error(f'Expecting {m} lines, got {len(lines)}.')
     matrix = np.zeros((m, n), dtype='float32')
     for i, row_string in enumerate(lines):
@@ -192,6 +195,7 @@ def get_simplex_parser():
 
     parser.add_argument('-l',
                         '--logging',
+                        action='store_true',
                         help='Display log messages.')
 
     return parser
@@ -199,5 +203,7 @@ def get_simplex_parser():
 
 def print_solution(run_flags, x, val):
     target = 'Max' if run_flags['maximize'] else 'Min'
+    if run_flags['logging']:
+        print('<<<<<<<<<<SOLUTION>>>>>>>>>>')
     print(f'{target} point: {x}')
     print(f'{target} value: {val}')
