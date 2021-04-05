@@ -35,17 +35,15 @@ def argmin_exclude(A, ex_rows, ex_columns):
 
     return min_i, min_j
 
-
-# Method of minimal prices
+# Min cost method
 def min_prices_method(C, a, b):
     C = np.array(C, dtype='float64')
     a = np.array(a, dtype='float64')
     b = np.array(b, dtype='float32')
     X = np.zeros(C.shape)
+    cap_mask = np.zeros(C.shape)
     m, n = C.shape
 
-    X = np.zeros(C.shape)
-    cap_mask = np.zeros(C.shape)
     removed_rows = np.array([], dtype='int')
     removed_columns = np.array([], dtype='int')
     
@@ -64,27 +62,18 @@ def min_prices_method(C, a, b):
 
         cap_mask[p][q] = 1
 
-    
-
-
     return X, cap_mask
 
 def potential_method(C, a, b, basis_solution, caps):
     print(f'>> Potential method')
     
 
-
-
-
-    
-        
 def problem_matrix_to_cab(problem_matrix):
     problem_matrix = np.array(problem_matrix)
     C = problem_matrix[:-1, :-1]
     a = problem_matrix[:-1, -1]
     b = problem_matrix[-1, :-1]
     return C, a, b
-
 
 
 def example1():
