@@ -64,11 +64,10 @@ def min_prices_method(C, a, b):
 
     return X, cap_mask
 
+# Returns index and axis of a potential
+# that has the most basic variables in either its
+# row or its column
 def find_best_potential(caps_mask):
-    # Returns index and axis of a potential
-    # that has the most basic variables in either its
-    # row or its column
-    
     best_row_index = None
     best_row_count = None
     # Check rows first
