@@ -64,8 +64,100 @@ def min_prices_method(C, a, b):
 
     return X, cap_mask
 
+def find_best_potential(caps_mask):
+    # Returns index and axis of a potential
+    # that has the most basic variables in either its
+    # row or its column
+    
+    best_row_index = None
+    best_row_count = None
+    # Check rows first
+    for i, row in enumerate(caps_mask):
+        basic_count = np.count_nonzero(row == 1)
+        if best_row_index is None or basic_count > best_row_count:
+            best_row_index = i
+            best_row_count = basic_count
+    
+    best_column_index = None
+    best_column_count = None
+    for j in range(caps_mask.shape[1]):
+        col = caps_mask[:, j]
+        basic_count = np.count_nonzero(col == 1)
+        if best_column_index is None or basic_count > best_column_count:
+            best_column_index = j
+            best_column_count = basic_count
+
+    return (best_row_index, 0) if best_row_count > best_column_count else (best_column_index, 1)
+        
+
 def potential_method(C, a, b, basis_solution, caps):
-    print(f'>> Potential method')
+    m, n = C.shape
+    print(f'>> Method of potentials')
+    print(f'm={m}, n={n}')
+    # Now we need to find ui, vj using:
+    # ui + vj = cijB
+    basis_indices = list(map(tuple, np.argwhere(caps == 1)))
+    non_basis_indices = list(map(tuple, np.argwhere(caps == 0)))
+    print(f'basic indices: {basis_indices}')
+    print(f'non basic indices: {non_basis_indices}')
+    potentials_systemA = np.zeros((m + n - 1, m + n))
+    potentials_systemB = np.zeros(m + n - 1)
+    for row, base_coords in enumerate(basis_indices):
+        base_i = base_coords[0]
+        base_j = base_coords[1]
+        potentials_systemA[row][base_i] = 1.0
+        potentials_systemA[row][m + base_j] = 1.0
+        potentials_systemB[row] = C[base_i][base_j]
+
+    print(f'Initial potential system:')
+    print(potentials_systemA)
+    print(potentials_systemB)
+
+    to_set_zero_index, to_set_zero_axis = find_best_potential(caps)
+    print('We shall set', 'u' if to_set_zero_axis == 0 else 'v', f'_{to_set_zero_index}={0}')
+
+    to_set_zero_actual_index = to_set_zero_index
+    if to_set_zero_axis == 1:
+        to_set_zero_index = m + to_set_zero_index
+
+    potentials_systemA = np.delete(potentials_systemA, to_set_zero_actual_index, 1)
+
+    print(f'System now:')
+    print(potentials_systemA)
+    print(potentials_systemB)
+
+    potential_system_solution = np.linalg.solve(potentials_systemA, potentials_systemB)
+    potential_system_solution = np.insert(potential_system_solution, to_set_zero_actual_index, 0)
+    print(f'Potentials:')
+    print(potential_system_solution)
+
+    r = None
+    s = None
+    lowest_val = None
+    for i, j in non_basis_indices:
+        # Cij - ui - vj >= 0
+        ui = potential_system_solution[i]
+        vj = potential_system_solution[m + j]
+        val = C[i][j] - ui - vj
+        print(f'i={i}, j={j}, Cij={C[i][j]}, ui={ui}, vj={vj}')
+        print(f'\tval={val}')
+        if val < 0:
+            if lowest_val is None or val < lowest_val:
+                lowest_val = val
+                r = i
+                s = j
+    
+    if lowest_val is None:
+        print(f'Stop reached!')
+        return;
+
+    print(f'Choosing negative value C_{r}_{s} = {lowest_val}')
+        
+        
+        
+
+
+
     
 
 def problem_matrix_to_cab(problem_matrix):
