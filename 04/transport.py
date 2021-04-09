@@ -1,4 +1,6 @@
 import numpy as np
+import networkx as nx
+import sys
 
 ### The transportation problem
 
@@ -88,127 +90,132 @@ def find_best_potential(caps_mask):
 
     return (best_row_index, 0) if best_row_count > best_column_count else (best_column_index, 1)
 
+def pack_indices(x, y, shape):
+    return x*shape[1] + y
+
+def unpack_index(x, shape):
+    return np.unravel_index(x, shape)
 
 def construct_graph(theta_i, theta_j, caps):
     m, n = caps.shape
+    shape = caps.shape
     graph_matrix = [[] for _ in range(m*n)]
     
+    def should_include_in_graph(ii, jj):
+        return caps[ii][jj] == 1 or (ii, jj) == (theta_i, theta_j)
+
     for i in range(m):
         for j in range(n):
-            if caps[i][j] == 0 and (i, j) != (theta_i, theta_j):
+            if not should_include_in_graph(i, j):
                 continue
 
             # Row edges
             for other_row in range(m):
-                if other_row == i or (caps[other_row][j] == 0 and (other_row, j) != (theta_i, theta_j)):
+                if not should_include_in_graph(other_row, j) or i == other_row:
                     continue
-                
                 # Edge between (i, j) and (other_row, j)
-                graph_matrix[i*n + j].append(other_row*n + j)
+                graph_matrix[pack_indices(i, j, shape)].append(pack_indices(other_row, j, shape))
 
 
             # Column edges
             for other_col in range(n):
-                if other_col == j or (caps[i][other_col] == 0 and (i, other_col) != (theta_i, theta_j)):
+                if not should_include_in_graph(i, other_col) or j == other_col:
                     continue
-
                 # Edge between (i, j) and (i, other_col)
-                graph_matrix[i*n + j].append(i*n + other_col)
+                graph_matrix[pack_indices(i, j, shape)].append(pack_indices(i, other_col, shape))
                 
-
     return graph_matrix
 
-    
-
-def is_stable_path(path, m, n):
-
-    last_state = None
-    current_state = None
-    for i in range(1, len(path)):
-        x1, y1 = np.unravel_index(path[i-1], (m, n))
-        x2, y2 = np.unravel_index(path[i], (m, n))
-
-        if x1 == x2:
-            current_state = 1
-        elif y1 == y2:
-            current_state = 2
-        else:
-            return False
-
-        if current_state == last_state:
-            return False
-
-        last_state = current_state
-
-    x1, y1 = np.unravel_index(path[-1], (m, n))
-    x2, y2 = np.unravel_index(path[0], (m, n))
-
-    if x1 == x2:
-        current_state = 1
-    elif y1 == y2:
-        current_state = 2
-    else:
-        return False
-
-    if current_state == last_state:
-        return False
-
-    return True
-
-
-def get_cycle(graph, start_node, t_m, t_n):
-
-    num_nodes = len(graph)
-    parents = [-1 for _ in range(num_nodes)]
-    on_stack = [False for _ in range(num_nodes)]
-
-    s = [(start_node, 0)]
-    on_stack[start_node] = True
-    path = []
-
-    while len(s) > 0:
-        node = s[-1][0]
-        index = s[-1][1]
-
-        if index == len(graph[node]):
-            s = s[:-1]
-            on_stack[node] = False
-            parents[node] = -1
+def graph_cleanup(graph_matrix):
+    graph_dict = dict()
+    for i, row in enumerate(graph_matrix):
+        if row == []:
             continue
+        graph_dict[i] = set(row)
 
-        val1 = (s[-1])[0]
-        val2 = (s[-1])[1] + 1
-        s = s[:-1]
-        s.append((val1, val2))
+    return graph_dict
 
-        child = graph[node][index]
+def get_graph(i, j, caps):
+    g = construct_graph(i, j, caps)
+    g = graph_cleanup(g)
+    return g
 
-        if child == start_node and parents[node] != start_node:
+def find_cycle(g, start_node, shape = None):
+    all_nodes = list(g.keys())
+    num_nodes = len(all_nodes)
 
-            if len(s) % 2 == 0:
-                path.append(start_node)
-                n = node
+    print(f'all_nodes = {all_nodes}')
+    print(f'num_nodes = {num_nodes}')
 
-                while n != -1:
-                    path.append(n)
-                    n = parents[n]
+    log_file = open("dfslog.txt", "w")
+    stout_backup = sys.stdout
+    sys.stdout = log_file
 
-                if is_stable_path(path, t_m, t_n):
+    def valid_branch_direction(last_direction, from_index, to_index):
+        from_i, _ = unpack_index(from_index, shape)
+        to_i, _ = unpack_index(to_index, shape)
+        
+        curr_direction = 1 if from_i == to_i else 0
+        if last_direction == -1:
+            return True, curr_direction
+
+        
+        # 1 means going horizontal
+        # 0 means going vertical
+        return last_direction != curr_direction, curr_direction
+
+
+        
+
+    def dfs(u, visited, path, last_direction=-1, depth=0):
+        def print_depth(*args, **kwargs):
+            print('\t'*depth, *args, **kwargs)
+
+        print_depth(f'> At node {u}')
+        visited = visited.copy()
+        path = path.copy()
+        visited[u] = True
+        path.append(u)
+        print_depth(f'\twith current path {path} and visited {[x for x, v in visited.items() if v]}')
+        for neigh in g[u]:
+            
+                
+            print_depth(f'\tChecking neighbor {neigh}')
+            valid_move, curr_dir = valid_branch_direction(last_direction, u, neigh)
+            if not valid_move:
+                print_depth(f'\t\tInvalid move as last branch was also', 'horizontal' if last_direction == 1 else 'vertical')
+                continue
+
+            if neigh == start_node:
+                print_depth(f'\t\tFound back edge to start node {start_node}.')
+                if len(path) >= 4:
+                    print_depth(f'\t\t\tLong enough!')
+                    path.append(start_node)
                     return path
                 else:
-                    path = []
+                    print_depth(f'\t\t\tToo short!')
+            if visited[neigh]:
+                print_depth(f'\t\tNeighbor already visited')
+                continue
+            
+            print_depth(f'\t\tNeighbor not visited, going recursive.')
+            potential_path = dfs(neigh, visited, path, last_direction=curr_dir, depth=depth+1)
+            print_depth(f'\t\tBack at node {u}', "REMINDER: ", ' --> '.join(map(str, path)))
+            if potential_path is not None:
+                print_depth(f'\t\tNeighbor {neigh} found the path, done!')
+                return potential_path
+        
+        return None
+    res = dfs(start_node, dict((i, False) for i in all_nodes), [])
+    sys.stdout = stout_backup
+    return res
 
-        if not on_stack[child]:
-            s.append((child, 0))
-            parents[child] = node
-            on_stack[child] = True
-
-    return []
-
+        
 
 
 def potential_method(C, a, b, basis_solution, caps):
     m, n = C.shape
+    shape = C.shape
     print(f'>> Method of potentials')
     print(f'm={m}, n={n}')
     # Now we need to find ui, vj using:
@@ -227,10 +234,6 @@ def potential_method(C, a, b, basis_solution, caps):
             potentials_systemA[row][m + base_j] = 1.0
             potentials_systemB[row] = C[base_i][base_j]
 
-        print(f'Initial potential system:')
-        print(potentials_systemA)
-        print(potentials_systemB)
-
         to_set_zero_index, to_set_zero_axis = find_best_potential(caps)
         print('We shall set', 'u' if to_set_zero_axis == 0 else 'v', f'_{to_set_zero_index}={0}')
 
@@ -240,14 +243,8 @@ def potential_method(C, a, b, basis_solution, caps):
 
         potentials_systemA = np.delete(potentials_systemA, to_set_zero_actual_index, 1)
 
-        print(f'System now:')
-        print(potentials_systemA)
-        print(potentials_systemB)
-
         potential_system_solution = np.linalg.solve(potentials_systemA, potentials_systemB)
         potential_system_solution = np.insert(potential_system_solution, to_set_zero_actual_index, 0)
-        print(f'Potentials:')
-        print(potential_system_solution)
 
         r = None
         s = None
@@ -257,8 +254,6 @@ def potential_method(C, a, b, basis_solution, caps):
             ui = potential_system_solution[i]
             vj = potential_system_solution[m + j]
             val = C[i][j] - ui - vj
-            print(f'i={i}, j={j}, Cij={C[i][j]}, ui={ui}, vj={vj}')
-            print(f'\tval={val}')
             if val < 0:
                 if lowest_val is None or val < lowest_val:
                     lowest_val = val
@@ -270,28 +265,19 @@ def potential_method(C, a, b, basis_solution, caps):
             return basis_solution
 
         print(f'Choosing negative value C_{r}_{s} = {lowest_val}')
+        print(f'caps:')
+        print(caps)
+        graph = get_graph(r, s, caps)
+        print(f'graph:')
+        print(graph)
+        cycle = find_cycle(graph, pack_indices(r, s, shape), shape=shape)
+        print(f'Cycle: {cycle}')
+        cycle_coordinates = list(map(lambda x: unpack_index(x, shape), cycle))
+        print(f'Cycle in normal coords: {cycle_coordinates}')
+        
 
-        graph_matrix = construct_graph(r, s, caps)
 
-        print(f'Graph: ')
-        print(graph_matrix)
-
-        path = get_cycle(graph_matrix, r*n + s, m, n)
-        print(path)
-
-        cycle_indices = list(map(lambda x: np.unravel_index(x, (m, n)), path))
-        print(f'Cycle indices: {cycle_indices}')
-
-        min_i = None
-        min_j = None
-        min_val = None
-        for base_i, base_j in basis_indices:
-            if min_val is None or basis_solution[base_i][base_j] < min_val:
-                min_val = basis_solution[base_i][base_j]
-                min_i = base_i
-                min_j = base_j
-
-        print(f'{min_i, min_j} leaves basis.')
+        break
         
 
         
