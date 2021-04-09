@@ -87,7 +87,125 @@ def find_best_potential(caps_mask):
             best_column_count = basic_count
 
     return (best_row_index, 0) if best_row_count > best_column_count else (best_column_index, 1)
-        
+
+
+def construct_graph(theta_i, theta_j, caps):
+    m, n = caps.shape
+    graph_matrix = [[] for _ in range(m*n)]
+    
+    for i in range(m):
+        for j in range(n):
+            if caps[i][j] == 0 and (i, j) != (theta_i, theta_j):
+                continue
+
+            # Row edges
+            for other_row in range(m):
+                if other_row == i or (caps[other_row][j] == 0 and (other_row, j) != (theta_i, theta_j)):
+                    continue
+                
+                # Edge between (i, j) and (other_row, j)
+                graph_matrix[i*n + j].append(other_row*n + j)
+
+
+            # Column edges
+            for other_col in range(n):
+                if other_col == j or (caps[i][other_col] == 0 and (i, other_col) != (theta_i, theta_j)):
+                    continue
+
+                # Edge between (i, j) and (i, other_col)
+                graph_matrix[i*n + j].append(i*n + other_col)
+                
+
+    return graph_matrix
+
+    
+
+def is_stable_path(path, m, n):
+
+    last_state = None
+    current_state = None
+    for i in range(1, len(path)):
+        x1, y1 = np.unravel_index(path[i-1], (m, n))
+        x2, y2 = np.unravel_index(path[i], (m, n))
+
+        if x1 == x2:
+            current_state = 1
+        elif y1 == y2:
+            current_state = 2
+        else:
+            return False
+
+        if current_state == last_state:
+            return False
+
+        last_state = current_state
+
+    x1, y1 = np.unravel_index(path[-1], (m, n))
+    x2, y2 = np.unravel_index(path[0], (m, n))
+
+    if x1 == x2:
+        current_state = 1
+    elif y1 == y2:
+        current_state = 2
+    else:
+        return False
+
+    if current_state == last_state:
+        return False
+
+    return True
+
+
+def get_cycle(graph, start_node, t_m, t_n):
+
+    num_nodes = len(graph)
+    parents = [-1 for _ in range(num_nodes)]
+    on_stack = [False for _ in range(num_nodes)]
+
+    s = [(start_node, 0)]
+    on_stack[start_node] = True
+    path = []
+
+    while len(s) > 0:
+        node = s[-1][0]
+        index = s[-1][1]
+
+        if index == len(graph[node]):
+            s = s[:-1]
+            on_stack[node] = False
+            parents[node] = -1
+            continue
+
+        val1 = (s[-1])[0]
+        val2 = (s[-1])[1] + 1
+        s = s[:-1]
+        s.append((val1, val2))
+
+        child = graph[node][index]
+
+        if child == start_node and parents[node] != start_node:
+
+            if len(s) % 2 == 0:
+                path.append(start_node)
+                n = node
+
+                while n != -1:
+                    path.append(n)
+                    n = parents[n]
+
+                if is_stable_path(path, t_m, t_n):
+                    return path
+                else:
+                    path = []
+
+        if not on_stack[child]:
+            s.append((child, 0))
+            parents[child] = node
+            on_stack[child] = True
+
+    return []
+
+
 
 def potential_method(C, a, b, basis_solution, caps):
     m, n = C.shape
@@ -95,63 +213,90 @@ def potential_method(C, a, b, basis_solution, caps):
     print(f'm={m}, n={n}')
     # Now we need to find ui, vj using:
     # ui + vj = cijB
-    basis_indices = list(map(tuple, np.argwhere(caps == 1)))
-    non_basis_indices = list(map(tuple, np.argwhere(caps == 0)))
-    print(f'basic indices: {basis_indices}')
-    print(f'non basic indices: {non_basis_indices}')
-    potentials_systemA = np.zeros((m + n - 1, m + n))
-    potentials_systemB = np.zeros(m + n - 1)
-    for row, base_coords in enumerate(basis_indices):
-        base_i = base_coords[0]
-        base_j = base_coords[1]
-        potentials_systemA[row][base_i] = 1.0
-        potentials_systemA[row][m + base_j] = 1.0
-        potentials_systemB[row] = C[base_i][base_j]
+    while True:
+        basis_indices = list(map(tuple, np.argwhere(caps == 1)))
+        non_basis_indices = list(map(tuple, np.argwhere(caps == 0)))
+        print(f'basic indices: {basis_indices}')
+        print(f'non basic indices: {non_basis_indices}')
+        potentials_systemA = np.zeros((m + n - 1, m + n))
+        potentials_systemB = np.zeros(m + n - 1)
+        for row, base_coords in enumerate(basis_indices):
+            base_i = base_coords[0]
+            base_j = base_coords[1]
+            potentials_systemA[row][base_i] = 1.0
+            potentials_systemA[row][m + base_j] = 1.0
+            potentials_systemB[row] = C[base_i][base_j]
 
-    print(f'Initial potential system:')
-    print(potentials_systemA)
-    print(potentials_systemB)
+        print(f'Initial potential system:')
+        print(potentials_systemA)
+        print(potentials_systemB)
 
-    to_set_zero_index, to_set_zero_axis = find_best_potential(caps)
-    print('We shall set', 'u' if to_set_zero_axis == 0 else 'v', f'_{to_set_zero_index}={0}')
+        to_set_zero_index, to_set_zero_axis = find_best_potential(caps)
+        print('We shall set', 'u' if to_set_zero_axis == 0 else 'v', f'_{to_set_zero_index}={0}')
 
-    to_set_zero_actual_index = to_set_zero_index
-    if to_set_zero_axis == 1:
-        to_set_zero_index = m + to_set_zero_index
+        to_set_zero_actual_index = to_set_zero_index
+        if to_set_zero_axis == 1:
+            to_set_zero_index = m + to_set_zero_index
 
-    potentials_systemA = np.delete(potentials_systemA, to_set_zero_actual_index, 1)
+        potentials_systemA = np.delete(potentials_systemA, to_set_zero_actual_index, 1)
 
-    print(f'System now:')
-    print(potentials_systemA)
-    print(potentials_systemB)
+        print(f'System now:')
+        print(potentials_systemA)
+        print(potentials_systemB)
 
-    potential_system_solution = np.linalg.solve(potentials_systemA, potentials_systemB)
-    potential_system_solution = np.insert(potential_system_solution, to_set_zero_actual_index, 0)
-    print(f'Potentials:')
-    print(potential_system_solution)
+        potential_system_solution = np.linalg.solve(potentials_systemA, potentials_systemB)
+        potential_system_solution = np.insert(potential_system_solution, to_set_zero_actual_index, 0)
+        print(f'Potentials:')
+        print(potential_system_solution)
 
-    r = None
-    s = None
-    lowest_val = None
-    for i, j in non_basis_indices:
-        # Cij - ui - vj >= 0
-        ui = potential_system_solution[i]
-        vj = potential_system_solution[m + j]
-        val = C[i][j] - ui - vj
-        print(f'i={i}, j={j}, Cij={C[i][j]}, ui={ui}, vj={vj}')
-        print(f'\tval={val}')
-        if val < 0:
-            if lowest_val is None or val < lowest_val:
-                lowest_val = val
-                r = i
-                s = j
-    
-    if lowest_val is None:
-        print(f'Stop reached!')
-        return;
-
-    print(f'Choosing negative value C_{r}_{s} = {lowest_val}')
+        r = None
+        s = None
+        lowest_val = None
+        for i, j in non_basis_indices:
+            # Cij - ui - vj >= 0
+            ui = potential_system_solution[i]
+            vj = potential_system_solution[m + j]
+            val = C[i][j] - ui - vj
+            print(f'i={i}, j={j}, Cij={C[i][j]}, ui={ui}, vj={vj}')
+            print(f'\tval={val}')
+            if val < 0:
+                if lowest_val is None or val < lowest_val:
+                    lowest_val = val
+                    r = i
+                    s = j
         
+        if lowest_val is None:
+            print(f'Stop reached!')
+            return basis_solution
+
+        print(f'Choosing negative value C_{r}_{s} = {lowest_val}')
+
+        graph_matrix = construct_graph(r, s, caps)
+
+        print(f'Graph: ')
+        print(graph_matrix)
+
+        path = get_cycle(graph_matrix, r*n + s, m, n)
+        print(path)
+
+        cycle_indices = list(map(lambda x: np.unravel_index(x, (m, n)), path))
+        print(f'Cycle indices: {cycle_indices}')
+
+        min_i = None
+        min_j = None
+        min_val = None
+        for base_i, base_j in basis_indices:
+            if min_val is None or basis_solution[base_i][base_j] < min_val:
+                min_val = basis_solution[base_i][base_j]
+                min_i = base_i
+                min_j = base_j
+
+        print(f'{min_i, min_j} leaves basis.')
+        
+
+        
+    
+
         
         
 
