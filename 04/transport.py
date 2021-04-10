@@ -183,7 +183,7 @@ def balance_problem(C, a, b):
     if supply > demand:
         # We need to add a column
         new_col = np.repeat(DUMMY_VALUE, C.shape[0])
-        C = np.hstack((C, new_col))
+        C = np.hstack((C, new_col.reshape(-1, 1)))
         b = np.append(b, diff)
         fcol = [C.shape[1] - 1]
     else:
