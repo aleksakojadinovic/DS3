@@ -5,7 +5,7 @@ import graphs
 import utils as ut
 import arg_parsing as ap
 
-DUMMY_VALUE = 1000
+DUMMY_VALUE = 0
 
 ### The transportation problem
 
