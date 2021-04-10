@@ -1,6 +1,10 @@
 import numpy as np
-import networkx as nx
 import sys
+
+import graphs
+import utils as ut
+
+DUMMY_VALUE = 1000
 
 ### The transportation problem
 
@@ -20,25 +24,10 @@ import sys
 # sum_{i=0,n-1} x_ij <= b_j  for all j  (DO NOT EXCEED DEMAND)
 # xij >= 0                              (NON NEGATIVE AMOUNTS)
 
-# TODO: Check if this can be refactored
-def argmin_exclude(A, ex_rows, ex_columns):
-    min_i = None
-    min_j = None
-    min_val = None
 
-    for i, row in enumerate(A):
-        for j, element in enumerate(row):
-            if i in ex_rows or j in ex_columns:
-                continue
-            if min_val is None or element < min_val:
-                min_i = i
-                min_j = j
-                min_val = element
-
-    return min_i, min_j
 
 # Min cost method
-def min_prices_method(C, a, b):
+def min_cost_method(C, a, b):
     C = np.array(C, dtype='float64')
     a = np.array(a, dtype='float64')
     b = np.array(b, dtype='float32')
@@ -50,7 +39,7 @@ def min_prices_method(C, a, b):
     removed_columns = np.array([], dtype='int')
     
     for iteration in range(m + n - 1):
-        p, q = argmin_exclude(C, removed_rows, removed_columns)
+        p, q = ut.argmin_exclude(C, removed_rows, removed_columns)
         the_min = min(a[p], b[q])
         X[p][q] = the_min
 
@@ -90,141 +79,18 @@ def find_best_potential(caps_mask):
 
     return (best_row_index, 0) if best_row_count > best_column_count else (best_column_index, 1)
 
-def pack_indices(x, y, shape):
-    return x*shape[1] + y
-
-def unpack_index(x, shape):
-    return np.unravel_index(x, shape)
-
-def construct_graph(theta_i, theta_j, caps):
-    m, n = caps.shape
-    shape = caps.shape
-    graph_matrix = [[] for _ in range(m*n)]
-    
-    def should_include_in_graph(ii, jj):
-        return caps[ii][jj] == 1 or (ii, jj) == (theta_i, theta_j)
-
-    for i in range(m):
-        for j in range(n):
-            if not should_include_in_graph(i, j):
-                continue
-
-            # Row edges
-            for other_row in range(m):
-                if not should_include_in_graph(other_row, j) or i == other_row:
-                    continue
-                # Edge between (i, j) and (other_row, j)
-                graph_matrix[pack_indices(i, j, shape)].append(pack_indices(other_row, j, shape))
-
-
-            # Column edges
-            for other_col in range(n):
-                if not should_include_in_graph(i, other_col) or j == other_col:
-                    continue
-                # Edge between (i, j) and (i, other_col)
-                graph_matrix[pack_indices(i, j, shape)].append(pack_indices(i, other_col, shape))
-                
-    return graph_matrix
-
-def graph_cleanup(graph_matrix):
-    graph_dict = dict()
-    for i, row in enumerate(graph_matrix):
-        if row == []:
-            continue
-        graph_dict[i] = set(row)
-
-    return graph_dict
-
-def get_graph(i, j, caps):
-    g = construct_graph(i, j, caps)
-    g = graph_cleanup(g)
-    return g
-
-def find_cycle(g, start_node, shape = None):
-    all_nodes = list(g.keys())
-    num_nodes = len(all_nodes)
-
-    print(f'all_nodes = {all_nodes}')
-    print(f'num_nodes = {num_nodes}')
-
-    log_file = open("dfslog.txt", "w")
-    stout_backup = sys.stdout
-    sys.stdout = log_file
-
-    def valid_branch_direction(last_direction, from_index, to_index):
-        from_i, _ = unpack_index(from_index, shape)
-        to_i, _ = unpack_index(to_index, shape)
-        
-        curr_direction = 1 if from_i == to_i else 0
-        if last_direction == -1:
-            return True, curr_direction
-
-        
-        # 1 means going horizontal
-        # 0 means going vertical
-        return last_direction != curr_direction, curr_direction
-
-
-        
-
-    def dfs(u, visited, path, last_direction=-1, depth=0):
-        def print_depth(*args, **kwargs):
-            print('\t'*depth, *args, **kwargs)
-
-        print_depth(f'> At node {u}')
-        visited = visited.copy()
-        path = path.copy()
-        visited[u] = True
-        path.append(u)
-        print_depth(f'\twith current path {path} and visited {[x for x, v in visited.items() if v]}')
-        for neigh in g[u]:
-            
-                
-            print_depth(f'\tChecking neighbor {neigh}')
-            valid_move, curr_dir = valid_branch_direction(last_direction, u, neigh)
-            if not valid_move:
-                print_depth(f'\t\tInvalid move as last branch was also', 'horizontal' if last_direction == 1 else 'vertical')
-                continue
-
-            if neigh == start_node:
-                print_depth(f'\t\tFound back edge to start node {start_node}.')
-                if len(path) >= 4:
-                    print_depth(f'\t\t\tLong enough!')
-                    path.append(start_node)
-                    return path
-                else:
-                    print_depth(f'\t\t\tToo short!')
-            if visited[neigh]:
-                print_depth(f'\t\tNeighbor already visited')
-                continue
-            
-            print_depth(f'\t\tNeighbor not visited, going recursive.')
-            potential_path = dfs(neigh, visited, path, last_direction=curr_dir, depth=depth+1)
-            print_depth(f'\t\tBack at node {u}', "REMINDER: ", ' --> '.join(map(str, path)))
-            if potential_path is not None:
-                print_depth(f'\t\tNeighbor {neigh} found the path, done!')
-                return potential_path
-        
-        return None
-    res = dfs(start_node, dict((i, False) for i in all_nodes), [])
-    sys.stdout = stout_backup
-    return res
-
-        
-
 
 def potential_method(C, a, b, basis_solution, caps):
     m, n = C.shape
     shape = C.shape
     print(f'>> Method of potentials')
-    print(f'm={m}, n={n}')
     # Now we need to find ui, vj using:
     # ui + vj = cijB
+    iteration = 0
     while True:
         basis_indices = list(map(tuple, np.argwhere(caps == 1)))
         non_basis_indices = list(map(tuple, np.argwhere(caps == 0)))
-        print(f'basic indices: {basis_indices}')
-        print(f'non basic indices: {non_basis_indices}')
+
         potentials_systemA = np.zeros((m + n - 1, m + n))
         potentials_systemB = np.zeros(m + n - 1)
         for row, base_coords in enumerate(basis_indices):
@@ -235,7 +101,6 @@ def potential_method(C, a, b, basis_solution, caps):
             potentials_systemB[row] = C[base_i][base_j]
 
         to_set_zero_index, to_set_zero_axis = find_best_potential(caps)
-        print('We shall set', 'u' if to_set_zero_axis == 0 else 'v', f'_{to_set_zero_index}={0}')
 
         to_set_zero_actual_index = to_set_zero_index
         if to_set_zero_axis == 1:
@@ -261,42 +126,82 @@ def potential_method(C, a, b, basis_solution, caps):
                     s = j
         
         if lowest_val is None:
-            print(f'Stop reached!')
             return basis_solution
 
-        print(f'Choosing negative value C_{r}_{s} = {lowest_val}')
-        print(f'caps:')
-        print(caps)
-        graph = get_graph(r, s, caps)
-        print(f'graph:')
-        print(graph)
-        cycle = find_cycle(graph, pack_indices(r, s, shape), shape=shape)
-        print(f'Cycle: {cycle}')
-        cycle_coordinates = list(map(lambda x: unpack_index(x, shape), cycle))
-        print(f'Cycle in normal coords: {cycle_coordinates}')
+        graph = graphs.get_graph(r, s, caps)
+        cycle = graphs.find_cycle(graph, ut.pack_indices(r, s, shape), shape=shape)
+        cycle_coordinates = list(map(lambda x: ut.unpack_index(x, shape), cycle))
+
+        initial_theta = lowest_val
+
+        # Correctional theta min XijB where XijB is in the cycle
+        corr_theta_i = None
+        corr_theta_j = None
+        corr_theta = None
+        for idx, (i, j) in enumerate(cycle_coordinates):
+            if idx % 2 == 1:
+                if corr_theta is None or basis_solution[i][j] < corr_theta:
+                    corr_theta_i = i
+                    corr_theta_j = j
+                    corr_theta = basis_solution[i][j]
         
+        # Now X_r_s is supposed to enter the basis
+        # And and XijB min leaves the basis
+        for idx, (i, j) in enumerate(cycle_coordinates):
+            coeff = 1 if idx % 2 == 0 else -1
+            basis_solution[i][j] += coeff * corr_theta
+
+        basis_solution[r][s] = corr_theta              
+
+        caps[corr_theta_i][corr_theta_j] = 0
+        caps[r][s] = 1
+        iteration += 1
+
+def interpret_potential_method_results(solution, C, fictional_rows=[], fictional_columns=[]):
+    sol = 0
+    for i in range(C.shape[0]):
+        if i in fictional_rows:
+            continue
+        for j in range(C.shape[1]):
+            if j in fictional_columns:
+                continue
+            sol += solution[i][j]*C[i][j]
+
+    return sol
+            
+def balance_problem(C, a, b):
+    supply = sum(a)
+    demand = sum(b)
+
+    if supply == demand:
+        return C, a, b, [], []
 
 
-        break
-        
-
-        
+    diff = abs(supply - demand)
+    frow = []
+    fcol = []
+    if supply > demand:
+        # We need to add a column
+        new_col = np.repeat(DUMMY_VALUE, C.shape[0])
+        C = np.hstack((C, new_col))
+        b = np.append(b, diff)
+        fcol = [C.shape[1] - 1]
+    else:
+        # We need to add a row
+        new_row = np.repeat(DUMMY_VALUE, C.shape[1])
+        C = np.vstack((C, new_row))
+        a = np.append(a, diff)
+        frow = [C.shape[0] - 1]
     
-
+    return C, a, b, frow, fcol
         
-        
 
-
-
-    
-
-def problem_matrix_to_cab(problem_matrix):
-    problem_matrix = np.array(problem_matrix)
-    C = problem_matrix[:-1, :-1]
-    a = problem_matrix[:-1, -1]
-    b = problem_matrix[-1, :-1]
-    return C, a, b
-
+def just_runnit(mat):
+    C, a, b = ut.problem_matrix_to_cab(mat)
+    C, a, b, fic_row, fic_col = balance_problem(C, a, b)
+    X, cap_mask = min_cost_method(C, a, b)
+    basis_matrix = potential_method(C, a, b, X, cap_mask)
+    print(interpret_potential_method_results(basis_matrix, C, fic_row, fic_col))
 
 def example1():
     mat      = [[20, 11, 15, 13, 2],
@@ -304,14 +209,22 @@ def example1():
                 [15, 12, 18, 18, 7],
                 [3, 3, 4, 5, 0]]
 
-    C, a, b = problem_matrix_to_cab(mat)
+    just_runnit(mat)
+
+def example2():
+    mat = [[3, 9, 8, 10, 4, 28],
+           [6, 10, 3, 2, 3, 13],
+           [3, 2, 7, 10, 3, 19],
+           [3, 2, 3, 2, 8, 18],
+           [24, 16, 10, 20, 22, 0]]
+
+    just_runnit(mat)
 
     
-    X, cap_mask = min_prices_method(C, a, b)
-    potential_method(C, a, b, X, cap_mask)
+
 
 if __name__ == '__main__':
-    example1()
+    example2()
 
 
 
