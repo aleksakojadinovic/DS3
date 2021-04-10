@@ -220,8 +220,6 @@ def example2():
     just_runnit(mat)
 
     
-
-
 if __name__ == '__main__':
     problem_matrix = ap.read_input()
     if problem_matrix is None:

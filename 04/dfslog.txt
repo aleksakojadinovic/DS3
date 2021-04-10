@@ -1,76 +1,45 @@
- > At node 9
- 	with current path [9] and visited [9]
- 	Checking neighbor 4
+ > At node 4
+ 	with current path [4] and visited [4]
+ 	Checking neighbor 0
  		Neighbor not visited, going recursive.
-	 > At node 4
-	 	with current path [9, 4] and visited [4, 9]
-	 	Checking neighbor 0
-	 		Neighbor not visited, going recursive.
-		 > At node 0
-		 	with current path [9, 4, 0] and visited [0, 4, 9]
-		 	Checking neighbor 4
-		 		Invalid move as last branch was also horizontal
-	 		Back at node 4 REMINDER:  9 --> 4
-	 	Checking neighbor 9
-	 		Invalid move as last branch was also vertical
-	 	Checking neighbor 14
-	 		Invalid move as last branch was also vertical
-	 	Checking neighbor 19
-	 		Invalid move as last branch was also vertical
-	 	Checking neighbor 24
-	 		Invalid move as last branch was also vertical
- 		Back at node 9 REMINDER:  9
- 	Checking neighbor 8
- 		Neighbor not visited, going recursive.
-	 > At node 8
-	 	with current path [9, 8] and visited [8, 9]
-	 	Checking neighbor 9
+	 > At node 0
+	 	with current path [4, 0] and visited [0, 4]
+	 	Checking neighbor 3
 	 		Invalid move as last branch was also horizontal
-	 	Checking neighbor 18
+	 	Checking neighbor 4
+	 		Invalid move as last branch was also horizontal
+ 		Back at node 4 REMINDER:  4
+ 	Checking neighbor 9
+ 		Neighbor not visited, going recursive.
+	 > At node 9
+	 	with current path [4, 9] and visited [4, 9]
+	 	Checking neighbor 8
 	 		Neighbor not visited, going recursive.
-		 > At node 18
-		 	with current path [9, 8, 18] and visited [8, 9, 18]
-		 	Checking neighbor 8
-		 		Invalid move as last branch was also vertical
-		 	Checking neighbor 17
+		 > At node 8
+		 	with current path [4, 9, 8] and visited [4, 8, 9]
+		 	Checking neighbor 9
+		 		Invalid move as last branch was also horizontal
+		 	Checking neighbor 3
 		 		Neighbor not visited, going recursive.
-			 > At node 17
-			 	with current path [9, 8, 18, 17] and visited [8, 9, 17, 18]
-			 	Checking neighbor 18
-			 		Invalid move as last branch was also horizontal
-			 	Checking neighbor 19
-			 		Invalid move as last branch was also horizontal
-		 		Back at node 18 REMINDER:  9 --> 8 --> 18
-		 	Checking neighbor 19
-		 		Neighbor not visited, going recursive.
-			 > At node 19
-			 	with current path [9, 8, 18, 19] and visited [8, 9, 18, 19]
-			 	Checking neighbor 4
+			 > At node 3
+			 	with current path [4, 9, 8, 3] and visited [3, 4, 8, 9]
+			 	Checking neighbor 8
+			 		Invalid move as last branch was also vertical
+			 	Checking neighbor 0
 			 		Neighbor not visited, going recursive.
-				 > At node 4
-				 	with current path [9, 8, 18, 19, 4] and visited [4, 8, 9, 18, 19]
-				 	Checking neighbor 0
-				 		Neighbor not visited, going recursive.
-					 > At node 0
-					 	with current path [9, 8, 18, 19, 4, 0] and visited [0, 4, 8, 9, 18, 19]
-					 	Checking neighbor 4
-					 		Invalid move as last branch was also horizontal
-				 		Back at node 4 REMINDER:  9 --> 8 --> 18 --> 19 --> 4
-				 	Checking neighbor 9
-				 		Invalid move as last branch was also vertical
-				 	Checking neighbor 14
-				 		Invalid move as last branch was also vertical
-				 	Checking neighbor 19
-				 		Invalid move as last branch was also vertical
-				 	Checking neighbor 24
-				 		Invalid move as last branch was also vertical
-			 		Back at node 19 REMINDER:  9 --> 8 --> 18 --> 19
-			 	Checking neighbor 9
-			 		Found back edge to start node 9.
+				 > At node 0
+				 	with current path [4, 9, 8, 3, 0] and visited [0, 3, 4, 8, 9]
+				 	Checking neighbor 3
+				 		Invalid move as last branch was also horizontal
+				 	Checking neighbor 4
+				 		Invalid move as last branch was also horizontal
+			 		Back at node 3 REMINDER:  4 --> 9 --> 8 --> 3
+			 	Checking neighbor 4
+			 		Found back edge to start node 4.
 			 			Long enough!
-		 		Back at node 18 REMINDER:  9 --> 8 --> 18
-		 		Neighbor 19 found the path, done!
-	 		Back at node 8 REMINDER:  9 --> 8
-	 		Neighbor 18 found the path, done!
- 		Back at node 9 REMINDER:  9
- 		Neighbor 8 found the path, done!
+		 		Back at node 8 REMINDER:  4 --> 9 --> 8
+		 		Neighbor 3 found the path, done!
+	 		Back at node 9 REMINDER:  4 --> 9
+	 		Neighbor 8 found the path, done!
+ 		Back at node 4 REMINDER:  4
+ 		Neighbor 9 found the path, done!
