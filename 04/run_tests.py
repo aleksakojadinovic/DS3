@@ -37,7 +37,7 @@ if __name__ == '__main__':
             print(f'Failed for example {i}, expected {r} got {er}')
 
     if failed > 0:
-        print('===========================================')
+        print('=============================================')
     print(f'Summary: ')
     print(f'Total: {total}')
     print(f'Passed: {passed}')
