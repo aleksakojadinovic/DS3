@@ -3,6 +3,7 @@ import sys
 
 import graphs
 import utils as ut
+import arg_parsing as ap
 
 DUMMY_VALUE = 1000
 
@@ -83,7 +84,6 @@ def find_best_potential(caps_mask):
 def potential_method(C, a, b, basis_solution, caps):
     m, n = C.shape
     shape = C.shape
-    print(f'>> Method of potentials')
     # Now we need to find ui, vj using:
     # ui + vj = cijB
     iteration = 0
@@ -208,7 +208,6 @@ def example1():
                 [17, 14, 12, 13, 6],
                 [15, 12, 18, 18, 7],
                 [3, 3, 4, 5, 0]]
-
     just_runnit(mat)
 
 def example2():
@@ -224,7 +223,12 @@ def example2():
 
 
 if __name__ == '__main__':
-    example2()
+    problem_matrix = ap.read_input()
+    if problem_matrix is None:
+        print('Invalid input file.')
+        sys.exit(1)
+    
+    just_runnit(problem_matrix)
 
 
 
