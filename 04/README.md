@@ -1,5 +1,5 @@
 # Transportation problem
-Transportation problem solver using min cost method and method od potentials.
+Transportation problem solver using min cost method and method of potentials.
 __________________________________________
 ### Usage:
 | Flag      | Meaning |
