@@ -132,8 +132,6 @@ def potential_method(C, a, b, basis_solution, caps):
         cycle = graphs.find_cycle(graph, ut.pack_indices(r, s, shape), shape=shape)
         cycle_coordinates = list(map(lambda x: ut.unpack_index(x, shape), cycle))
 
-        initial_theta = lowest_val
-
         # Correctional theta min XijB where XijB is in the cycle
         corr_theta_i = None
         corr_theta_j = None
