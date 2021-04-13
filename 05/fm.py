@@ -246,7 +246,7 @@ def fourier_motzkin(A, b, elimination_order=None, value_picks=None, just_last=Fa
         # print('===================================')
 
     # print('-----------------------------------------------------------------------------')
-    return chosen_intervals
+    return chosen_intervals, chosen_var_values
 
 # ============================ (2) POINT IN SYSTEM ===============================
 
