@@ -1,5 +1,6 @@
 import numpy as np
-import fm
+from scipy.optimize import linprog
+
 
 # TODO: Refactor with list indexing
 def reconstruct_vector(X, original_length, anulled_indices):
@@ -87,6 +88,68 @@ def dominate(game_matrix):
     # return game_matrix, removed_rows, removed_columns
 
 
+# Prepares matrix for linear programming solver
+# If direction is invalid then min is used
+def prepare_for_lp_solver(game_matrix, direction):
+    game_matrix = np.array(game_matrix)
+    if direction not in ['min', 'max']:
+        direction = 'min'
+
+    # The matrix represents regular >= or <= constraints
+    # If max then >=, if min then <=
+    # Scipy uses <= so if min then we keep the signs,
+    # if max then we change the signs
+
+    if direction == 'max':
+        game_matrix *= -1
+
+    orig_m, orig_n = game_matrix.shape
+    # Constraints:
+    #   2 for >= 0 for new variables
+    #   orig_n for xi >= 0
+    #   1 for sum_xi = 1
+    ineq_constrains = np.zeros((orig_m, orig_n + 2))
+    m, n = ineq_constrains.shape
+
+    # We add original constrains plus the new vars (-v1 + v2)
+    ineq_constrains[:orig_m, :orig_n] = game_matrix
+    ineq_constrains[:orig_m, orig_n:] = [[-1, 1] if direction == 'min' else [1, -1] for _ in range(orig_m)]
+    ineq_b = np.zeros(ineq_constrains.shape[0])
+
+    eq_constraints = np.array([np.zeros(n)])
+    eq_constraints[0, :orig_n] = 1
+    eq_b = [1]
+
+
+    
+
+    target = np.zeros(n)
+    target[-1] = -1
+    target[-2] = 1
+    if direction == 'max':
+        target *= -1
+
+    # scipy.optimize.linprog(c, A_ub=None, b_ub=None, A_eq=None, b_eq=None, bounds=None, method='interior-point', callback=None, options=None, x0=None)
+    res = linprog(c=target, A_ub=ineq_constrains, b_ub=ineq_b, A_eq=eq_constraints, b_eq=eq_b)
+
+
+    actual_fun = res.fun
+    actual_x = np.append(res.x[:-2], [res.x[-2] - res.x[-1]])
+    return actual_fun if direction == 'min' else -actual_fun, actual_x
+
+
+    
+
+    
+        
+
+
+    
+
+
+
+
+
 
 def solve_game(game_matrix):
     game_matrix = np.array(game_matrix)
@@ -97,6 +160,11 @@ def solve_game(game_matrix):
     game_matrix_dominated, removed_rows, removed_columns = dominate(game_matrix)
     print(f'Dominated:')
     print(game_matrix_dominated)
+
+    f1, x1 = prepare_for_lp_solver(game_matrix_dominated, 'min')
+    f2, x2 = prepare_for_lp_solver(game_matrix_dominated.T, 'max')
+    return f1, x1
+
     
 
 
@@ -111,3 +179,4 @@ def example1():
 if __name__ == '__main__':
     print(f'Running...')
     example1()
+    
