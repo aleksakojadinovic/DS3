@@ -162,7 +162,7 @@ def solve_game(game_matrix):
     f, y = solve_lp_problem(game_matrix_dominated, 'min')
     _, x = solve_lp_problem(game_matrix_dominated.T, 'max')
 
-    x = reconstruct_vector(x, n, removed_columns)
+    x = reconstruct_vector(x, n, removed_rows)
     y = reconstruct_vector(y, n, removed_columns)
     
     return np.around(f, DEC), np.round(x, DEC), np.round(y, DEC)
