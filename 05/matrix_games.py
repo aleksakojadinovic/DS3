@@ -200,5 +200,7 @@ if __name__ == '__main__':
         print(f'Parse error occurred.')
         sys.exit(1)
     
-    f, x, y = solve_game(in_matrix)
-    print(f, x, y)
+    v, x, y = solve_game(in_matrix)
+    print(f'v = {v}')
+    print(f'x = {x}')
+    print(f'y = {y}')
