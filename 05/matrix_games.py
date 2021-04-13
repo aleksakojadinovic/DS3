@@ -202,5 +202,5 @@ if __name__ == '__main__':
     
     v, x, y = solve_game(in_matrix)
     print(f'v = {v}')
-    print(f'x = {x}')
-    print(f'y = {y}')
+    print(f'x = {tuple(list(x))}')
+    print(f'y = {tuple(list(y))}')
