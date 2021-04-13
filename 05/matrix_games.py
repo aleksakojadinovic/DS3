@@ -1,6 +1,9 @@
 import numpy as np
 from scipy.optimize import linprog
+import arg_parsing
+import sys
 
+DEC = 7
 
 # TODO: Refactor with list indexing
 def reconstruct_vector(X, original_length, anulled_indices):
@@ -90,7 +93,7 @@ def dominate(game_matrix):
 
 # Prepares matrix for linear programming solver
 # If direction is invalid then min is used
-def prepare_for_lp_solver(game_matrix, direction):
+def solve_lp_problem(game_matrix, direction):
     game_matrix = np.array(game_matrix)
     if direction not in ['min', 'max']:
         direction = 'min'
@@ -155,15 +158,14 @@ def solve_game(game_matrix):
     game_matrix = np.array(game_matrix)
     m, n = game_matrix.shape
 
-    print(f'Solving game for:')
-    print(game_matrix)
     game_matrix_dominated, removed_rows, removed_columns = dominate(game_matrix)
-    print(f'Dominated:')
-    print(game_matrix_dominated)
+    f, y = solve_lp_problem(game_matrix_dominated, 'min')
+    _, x = solve_lp_problem(game_matrix_dominated.T, 'max')
 
-    f1, x1 = prepare_for_lp_solver(game_matrix_dominated, 'min')
-    f2, x2 = prepare_for_lp_solver(game_matrix_dominated.T, 'max')
-    return f1, x1
+    x = reconstruct_vector(x, n, removed_columns)
+    y = reconstruct_vector(y, n, removed_columns)
+    
+    return np.around(f, DEC), np.round(x, DEC), np.round(y, DEC)
 
     
 
@@ -174,9 +176,29 @@ def example1():
         [2, 2, 1, 1],
         [1, 1, 1, 1]]
 
-    solve_game(M)
+    print(solve_game(M))
+
+
+def example2():
+    M = [[1, -1, -1],
+        [-1, -1, 3],
+        [-1, -2, -1]]
+
+    print(solve_game(M))
+
+def example3():
+    M = [[100, 0],
+        [-100, 200]]
+
+    print(solve_game(M))
+
+
 
 if __name__ == '__main__':
-    print(f'Running...')
-    example1()
+    in_matrix = arg_parsing.read_input()
+    if in_matrix is None:
+        print(f'Parse error occurred.')
+        sys.exit(1)
     
+    f, x, y = solve_game(in_matrix)
+    print(f, x, y)
