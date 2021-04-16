@@ -233,7 +233,10 @@ def just_runnit(mat):
     X, cap_mask = min_cost_method(C, a, b, is_assignment)
     basis_matrix = potential_method(C, a, b, X, cap_mask)
     print(interpret_potential_method_results(basis_matrix, C, fic_row, fic_col))
-    print(basis_matrix)
+    actual_num_rows = basis_matrix.shape[0] - len(fic_row)
+    actual_num_cols = basis_matrix.shape[1] - len(fic_col)
+    actual_basis_matrix = basis_matrix[:actual_num_rows, :actual_num_cols]
+    print(actual_basis_matrix)
 
 def example1():
     mat      = [[20, 11, 15, 13, 2],
