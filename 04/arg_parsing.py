@@ -10,6 +10,7 @@ def get_parser():
                          help='The input file',
                          required=True)
 
+
     return parser
 
 
