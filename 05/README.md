@@ -17,3 +17,4 @@ where `cij` is the gain when player 1 uses strategy `i` and player 2 uses strate
 __________________________________________
 ### Modules:
 - [`numpy`](https://numpy.org/)
+- ['scipy`](https://www.scipy.org/)

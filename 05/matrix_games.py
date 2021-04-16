@@ -141,19 +141,6 @@ def solve_lp_problem(game_matrix, direction):
     return actual_fun if direction == 'min' else -actual_fun, actual_x
 
 
-    
-
-    
-        
-
-
-    
-
-
-
-
-
-
 def solve_game(game_matrix):
     game_matrix = np.array(game_matrix)
     m, n = game_matrix.shape
@@ -162,7 +149,7 @@ def solve_game(game_matrix):
     f, y = solve_lp_problem(game_matrix_dominated, 'min')
     _, x = solve_lp_problem(game_matrix_dominated.T, 'max')
 
-    x = reconstruct_vector(x, n, removed_rows)
+    x = reconstruct_vector(x, m, removed_rows)
     y = reconstruct_vector(y, n, removed_columns)
     
     return np.around(f, DEC), np.round(x, DEC), np.round(y, DEC)
@@ -190,6 +177,10 @@ def example3():
     M = [[100, 0],
         [-100, 200]]
 
+    print(solve_game(M))
+
+def edge_case_1():
+    M = [[1, 1]]
     print(solve_game(M))
 
 

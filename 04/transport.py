@@ -5,7 +5,7 @@ import graphs
 import utils as ut
 import arg_parsing as ap
 
-DUMMY_VALUE = 0
+DUMMY_VALUE = 1000
 
 ### The transportation problem
 
@@ -126,6 +126,7 @@ def potential_method(C, a, b, basis_solution, caps):
                     s = j
         
         if lowest_val is None:
+            print(basis_solution)
             return basis_solution
 
         graph = graphs.get_graph(r, s, caps)
