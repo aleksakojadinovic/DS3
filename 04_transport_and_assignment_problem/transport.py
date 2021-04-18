@@ -28,7 +28,7 @@ DUMMY_VALUE = 1000
 
 
 # Min cost method
-def min_cost_method(C, a, b, assignment=False):
+def min_cost_method(C, a, b):
     C = np.array(C, dtype='float64')
     a = np.array(a, dtype='float64')
     b = np.array(b, dtype='float32')
@@ -39,7 +39,7 @@ def min_cost_method(C, a, b, assignment=False):
     removed_rows = np.array([], dtype='int')
     removed_columns = np.array([], dtype='int')
     
-    for iteration in range(m + n - 1):
+    for _ in range(m + n - 1):
         p, q = ut.argmin_exclude(C, removed_rows, removed_columns)
         the_min = min(a[p], b[q])
         X[p][q] = the_min
@@ -47,16 +47,12 @@ def min_cost_method(C, a, b, assignment=False):
         a[p] = a[p] - the_min
         b[q] = b[q] - the_min
 
-        if assignment:
-            if a[p] == 0:
-                removed_rows = np.append(removed_rows, p)
-            elif b[q] == 0:
-                removed_columns = np.append(removed_columns, q)
-        else:
-            if a[p] == 0:
-                removed_rows = np.append(removed_rows, p)
-            if b[q] == 0:
-                removed_columns = np.append(removed_columns, q)
+        
+        if a[p] == 0:
+            removed_rows = np.append(removed_rows, p)
+        elif b[q] == 0:
+            removed_columns = np.append(removed_columns, q)
+        
 
         cap_mask[p][q] = 1
 
@@ -230,7 +226,7 @@ def just_runnit(mat):
     is_assignment = (a == 1).all() and (b == 1).all()
     balancing_function = balance_assignment_problem if is_assignment else balance_problem
     C, a, b, fic_row, fic_col = balancing_function(C, a, b)
-    X, cap_mask = min_cost_method(C, a, b, is_assignment)
+    X, cap_mask = min_cost_method(C, a, b)
     basis_matrix = potential_method(C, a, b, X, cap_mask)
     print(interpret_potential_method_results(basis_matrix, C, fic_row, fic_col))
     actual_num_rows = basis_matrix.shape[0] - len(fic_row)
