@@ -9,12 +9,13 @@ __________________________________________
 __________________________________________
 ### Input format:
 ```
-c11 c12 ... c1n
-c21 c22 ... c2n
- ... 
-cm1 cm2 ... cmn
+c11 c12 ... c1n a1
+c21 c22 ... c2n a2
+ ...  
+cm1 cm2 ... cmn am
+b1 b2   ... bn   0   
 ```
-where `cij` is the cost of transporting a unit from `i` to `j`
+where `cij` is the cost of transporting a unit from `i` to `j`, `ai` is the supply at `i` and `bj` is the demand at `j`
 __________________________________________
 ### Modules:
 - [`numpy`](https://numpy.org/)
