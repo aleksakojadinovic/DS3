@@ -63,24 +63,18 @@ def knapsack_backwards(values, weights, max_weight):
     return dp_matrix, dp_matrix[num_items - 1][max_weight], reconstruct_knapsack(dp_matrix, values, weights)
 
 
-def example1():
-    c = [4, 2, 2, 1, 10]
-    a = [12, 2, 1, 1, 4]
-    mw = 15
-    _, opt, taken = knapsack_backwards(c, a, mw)
+def print_simple(dp_matrix, opt, taken):
     print(opt)
     print(taken)
 
-def example2():
-    c = [3, 4, 5, 2]
-    a = [2, 3, 4, 5]
-    mw = 9
-    _, opt, taken = knapsack_backwards(c, a, mw)
-    print(opt)
-    print(taken)
-
-
-
+def print_human_readable(dp_matrix, opt, taken):
+    print(f'Optimal value: {int(opt)}')
+    print(f'Items: ')
+    items_and_units = filter(lambda entry: entry[1] != 0, enumerate(map(int, taken)))
+    items_strings = '\r\n'.join(f"\tTake {unit} unit{'s' if unit > 1 else ' '} of item {item}" for item, unit in items_and_units)
+    print(items_strings)
+    
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', 
@@ -92,6 +86,11 @@ if __name__ == '__main__':
                         '--direction',
                         help='Whether to use `in advance` or `backwards`',
                         default='in_advance')
+
+    parser.add_argument('-w',
+                        '--words',
+                        help='Print a human-readable output',
+                        action='store_true')
 
     args = parser.parse_args()
 
@@ -107,7 +106,8 @@ if __name__ == '__main__':
         lines = (line for line in lines if line[0] != '#')
         lines = list(lines)
 
-        func = knapsack_in_advance if args.direction == 'in_advance' else knapsack_backwards
+        solve_func = knapsack_in_advance if args.direction == 'in_advance' else knapsack_backwards
+        print_func = print_human_readable if args.words else print_simple
         total = int(lines[0])
         
         values = list(map(int, lines[1].split(" ")))
@@ -118,11 +118,8 @@ if __name__ == '__main__':
         if len(values) == 0:
             sys.exit(0)
 
-        _, opt, taken = func(values, weights, total)
-        print(opt)
-        print(taken)
-            
-
+        dp_matrix, opt, taken = solve_func(values, weights, total)
+        print_func(dp_matrix, opt, taken)
     except:
         print('Failed to parse input file.')
         sys.exit(1)
