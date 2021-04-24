@@ -27,6 +27,7 @@ def reconstruct_knapsack(dp_matrix, values, weights):
 
     return taken
 
+
 def knapsack_in_advance(values, weights, max_weight):
     c = np.array(values)
     a = np.array(weights)
@@ -57,7 +58,6 @@ def knapsack_backwards(values, weights, max_weight):
         for y in range(max_weight + 1):
             cands = [c[k]*p + dp_matrix[k-1][y - weights[k]*p] for p in range(int(np.floor(y/weights[k])) + 1)]
             val = 0 if len(cands) == 0 else max(cands)
-            # print([c[k]*p + dp_matrix[k-1][y - weights[k]*p] for p in range(np.floor(y/weights[k]))])
             dp_matrix[k][y] = val
 
     return dp_matrix, dp_matrix[num_items - 1][max_weight], reconstruct_knapsack(dp_matrix, values, weights)
@@ -66,6 +66,7 @@ def knapsack_backwards(values, weights, max_weight):
 def print_simple(dp_matrix, opt, taken):
     print(opt)
     print(taken)
+    print(dp_matrix)
 
 def print_human_readable(dp_matrix, opt, taken):
     print(f'Optimal value: {int(opt)}')

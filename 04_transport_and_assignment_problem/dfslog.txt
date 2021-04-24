@@ -1,63 +1,41 @@
- > At node 3
- 	with current path [3] and visited [3]
- 	Checking neighbor 0
+ > At node 15
+ 	with current path [15] and visited [15]
+ 	Checking neighbor 16
  		Neighbor not visited, going recursive.
-	 > At node 0
-	 	with current path [3, 0] and visited [0, 3]
-	 	Checking neighbor 2
-	 		Invalid move as last branch was also horizontal
-	 	Checking neighbor 3
-	 		Invalid move as last branch was also horizontal
-	 	Checking neighbor 12
+	 > At node 16
+	 	with current path [15, 16] and visited [15, 16]
+	 	Checking neighbor 1
 	 		Neighbor not visited, going recursive.
-		 > At node 12
-		 	with current path [3, 0, 12] and visited [0, 3, 12]
-		 	Checking neighbor 0
+		 > At node 1
+		 	with current path [15, 16, 1] and visited [1, 15, 16]
+		 	Checking neighbor 16
 		 		Invalid move as last branch was also vertical
-	 		Back at node 0 REMINDER:  3 --> 0
- 		Back at node 3 REMINDER:  3
- 	Checking neighbor 2
- 		Neighbor not visited, going recursive.
-	 > At node 2
-	 	with current path [3, 2] and visited [2, 3]
-	 	Checking neighbor 0
-	 		Invalid move as last branch was also horizontal
-	 	Checking neighbor 3
-	 		Invalid move as last branch was also horizontal
-	 	Checking neighbor 20
-	 		Neighbor not visited, going recursive.
-		 > At node 20
-		 	with current path [3, 2, 20] and visited [2, 3, 20]
-		 	Checking neighbor 2
-		 		Invalid move as last branch was also vertical
-		 	Checking neighbor 19
+		 	Checking neighbor 3
 		 		Neighbor not visited, going recursive.
-			 > At node 19
-			 	with current path [3, 2, 20, 19] and visited [2, 3, 19, 20]
-			 	Checking neighbor 20
+			 > At node 3
+			 	with current path [15, 16, 1, 3] and visited [1, 3, 15, 16]
+			 	Checking neighbor 1
 			 		Invalid move as last branch was also horizontal
-			 	Checking neighbor 21
-			 		Invalid move as last branch was also horizontal
-			 	Checking neighbor 22
-			 		Invalid move as last branch was also horizontal
-			 	Checking neighbor 7
+			 	Checking neighbor 13
 			 		Neighbor not visited, going recursive.
-				 > At node 7
-				 	with current path [3, 2, 20, 19, 7] and visited [2, 3, 7, 19, 20]
-				 	Checking neighbor 19
-				 		Invalid move as last branch was also vertical
-			 		Back at node 19 REMINDER:  3 --> 2 --> 20 --> 19
-		 		Back at node 20 REMINDER:  3 --> 2 --> 20
-		 	Checking neighbor 21
-		 		Neighbor not visited, going recursive.
-			 > At node 21
-			 	with current path [3, 2, 20, 21] and visited [2, 3, 20, 21]
-			 	Checking neighbor 3
-			 		Found back edge to start node 3.
-			 			Long enough!
-		 		Back at node 20 REMINDER:  3 --> 2 --> 20
-		 		Neighbor 21 found the path, done!
-	 		Back at node 2 REMINDER:  3 --> 2
-	 		Neighbor 20 found the path, done!
- 		Back at node 3 REMINDER:  3
- 		Neighbor 2 found the path, done!
+				 > At node 13
+				 	with current path [15, 16, 1, 3, 13] and visited [1, 3, 13, 15, 16]
+				 	Checking neighbor 10
+				 		Neighbor not visited, going recursive.
+					 > At node 10
+					 	with current path [15, 16, 1, 3, 13, 10] and visited [1, 3, 10, 13, 15, 16]
+					 	Checking neighbor 13
+					 		Invalid move as last branch was also horizontal
+					 	Checking neighbor 15
+					 		Found back edge to start node 15.
+					 			Long enough!
+				 		Back at node 13 REMINDER:  15 --> 16 --> 1 --> 3 --> 13
+				 		Neighbor 10 found the path, done!
+			 		Back at node 3 REMINDER:  15 --> 16 --> 1 --> 3
+			 		Neighbor 13 found the path, done!
+		 		Back at node 1 REMINDER:  15 --> 16 --> 1
+		 		Neighbor 3 found the path, done!
+	 		Back at node 16 REMINDER:  15 --> 16
+	 		Neighbor 1 found the path, done!
+ 		Back at node 15 REMINDER:  15
+ 		Neighbor 16 found the path, done!
