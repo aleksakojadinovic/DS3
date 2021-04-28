@@ -62,6 +62,35 @@ def knapsack_backwards(values, weights, max_weight):
 
     return dp_matrix, dp_matrix[num_items - 1][max_weight], reconstruct_knapsack(dp_matrix, values, weights)
 
+def reconstruct_zero_one(dp_matrix, weights):
+    res = np.zeros(len(weights))
+    i, j = len(dp_matrix)-1, len(dp_matrix[0])-1
+
+    while(i > 0):
+        if dp_matrix[i][j] != dp_matrix[i-1][j]:
+            res[i-1] += 1
+            j -= weights[i-1]
+        i -= 1
+
+    # res.reverse()
+    return res
+
+
+def zero_one_knapsack(values, weights, max_weight):
+    n = len(values)
+    dp_matrix = np.zeros((n+1, max_weight+1))
+
+    for i in range(n + 1):
+        for y in range(max_weight + 1):
+            if i == 0 or y == 0:
+                dp_matrix[i][y] = 0
+            elif weights[i - 1] <= y:
+                dp_matrix[i][y] = max(values[i - 1] + dp_matrix[i - 1][y - weights[i - 1]], dp_matrix[i - 1][y])
+            else:
+                dp_matrix[i][y] = dp_matrix[i - 1][y]
+
+    return dp_matrix, dp_matrix[n][max_weight], reconstruct_zero_one(dp_matrix, weights)
+
 
 def print_simple(dp_matrix, opt, taken):
     print(opt)
@@ -93,6 +122,11 @@ if __name__ == '__main__':
                         help='Print a human-readable output',
                         action='store_true')
 
+    parser.add_argument('-z',
+                        '--zeroone',
+                        help='Solve 0/1 knapsack',
+                        action='store_true')
+
     args = parser.parse_args()
 
 
@@ -107,7 +141,13 @@ if __name__ == '__main__':
         lines = (line for line in lines if line[0] != '#')
         lines = list(lines)
 
-        solve_func = knapsack_in_advance if args.direction == 'in_advance' else knapsack_backwards
+        if args.zeroone:
+            solve_func = zero_one_knapsack
+        elif args.direction == 'in_advance':
+            solve_func = knapsack_in_advance
+        else:
+            solve_func = knapsack_backwards
+
         print_func = print_human_readable if args.words else print_simple
         total = int(lines[0])
         
