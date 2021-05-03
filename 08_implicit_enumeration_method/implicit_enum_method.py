@@ -108,6 +108,7 @@ def implicit_enum_method(c, A, b, d):
     total_terminals = 0
     total_pruned    = 0
     total_entered   = 0
+    total_unfeas    = 0
 
     while bfs_queue:
         
@@ -148,6 +149,7 @@ def implicit_enum_method(c, A, b, d):
 
             if not feasible:
                 printl(f'Unfeasible.')
+                total_unfeas += 1
                 continue
             
             if not maybe_optimal:
@@ -198,9 +200,11 @@ def implicit_enum_method(c, A, b, d):
     for op in opt_points:
         print(f'\t{op}')
 
+    print(f'Entered: {total_entered}')
+    print(f'Unfeasible: {total_unfeas}')
     print(f'Terminals: {total_terminals}')
     print(f'Pruned: {total_pruned}')
-    print(f'Entered: {total_entered}')
+    
         
 
         
@@ -225,5 +229,24 @@ def example1():
     implicit_enum_method(c, A, b, d)    
 
 
+def example2():
+    c = [-9, -5, -6, -4]
+    A = [[6, 3, 5, 2],
+         [0, 0, -1, 1],
+         [-1, 0, 1, 0],
+         [0, -1, 0, 1]]
+    b = [10, 1, 0, 0]
+    d = [IntegerDomain.Binary() for _ in c]
+
+    implicit_enum_method(c, A, b, d)    
+
+def example3():
+    c = [-12, -8, -7, -6]
+    A = [[8, 6, 5, 4]]
+    b = [15]
+    d = [IntegerDomain.Binary() for _ in c]
+
+    implicit_enum_method(c, A, b, d)    
+
 if __name__ == '__main__':
-    example1()
+    example3()
