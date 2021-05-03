@@ -41,6 +41,7 @@ class BFSData:
         return '\r\n'.join([tab + head, tab + fvars, tab + fvals, tab + popt])
 
 
+
 def mask_and_vals_to_list(mask, vals):
     return [(idx, v) for idx, flag, v in enumerate(zip(mask, vals)) if flag ==1]
 
@@ -55,9 +56,9 @@ def exp_lower_bound_fixed(linexp, domains, fixed_vars_mask, fixed_vars_values):
     the_sum = 0
     for fflag, fval, d, coeff in zip(fixed_vars_mask, fixed_vars_values, domains, linexp):
         if fflag == 1:
-            the_sum += fval
+            the_sum += coeff*fval
         else:
-            the_sum += d.upper if coeff < 0 else d.lower
+            the_sum += d.upper*coeff if coeff < 0 else d.lower*coeff
     
     return the_sum
 
@@ -65,7 +66,9 @@ def check_constr_lower_bound_fixed(a, b, domains, fixed_vars_mask, fixed_vars_va
     return exp_lower_bound_fixed(a, domains, fixed_vars_mask, fixed_vars_values) <= b
 
 def check_all_constr_lower_bound_fixed(A, b_vec, domains, fixed_vars_mask, fixed_vars_values):
-    return all(check_all_constr_lower_bound_fixed(a, b, domains, fixed_vars_mask, fixed_vars_values) for a, b in zip(A, b_vec))
+    vals = [check_constr_lower_bound_fixed(a, b, domains, fixed_vars_mask, fixed_vars_values) for a, b in zip(A, b_vec)]
+    return all(vals)
+
 
 def implicit_enum_method(c, A, b, d):
     r"""
@@ -81,8 +84,12 @@ def implicit_enum_method(c, A, b, d):
 
     n = len(c)
 
+
+
     opt_val         = float('inf')
     opt_points      = []
+
+    global_lower_bound = exp_lower_bound(c, d)
 
     
     bfs_queue       = [BFSData(fixed_vars_mask      = np.zeros(n), 
@@ -91,7 +98,7 @@ def implicit_enum_method(c, A, b, d):
                                next_var_val         = None,
                                level                = 0,
                                parent               = None,
-                               parent_opt           = exp_lower_bound(c, d))]
+                               parent_opt           = None)]
 
     while bfs_queue:
 
@@ -102,38 +109,67 @@ def implicit_enum_method(c, A, b, d):
         def printl(*args, **kwargs):
             print('\t'*current_node_data.level, *args, **kwargs)
 
-        print(current_node_data)
-
         if current_node_data.next_var >= n:
             print('\t'*current_node_data.level + 'Leaf node found, this branch is done!')
+            continue
+        
+        printl(f'GLOBAL OPTIMUM: {opt_val}')
+        printl(f'Supposed to fix variable x_{current_node_data.next_var} to value {current_node_data.next_var_val}')
 
         feasible        = True
         maybe_optimal   = True
+        new_fixed_vars_mask = current_node_data.fixed_vars_mask.copy()
+        new_fixed_vars_values = current_node_data.fixed_vars_values.copy()
         if current_node_data.next_var != -1:
             # Now we fix another variable and we check for feasibility
-            new_fixed_vars_mask = current_node_data.fixed_vars_mask.copy()
-            new_fixed_vars_values = current_node_data.fixed_vars_values.copy()
-
             new_fixed_vars_mask[current_node_data.next_var] = 1
             new_fixed_vars_values[current_node_data.next_var] = current_node_data.next_var_val
-
             printl(f'Attempting to fix variable x_{current_node_data.next_var} to value {current_node_data.next_var_val}')
 
             feasible        = check_all_constr_lower_bound_fixed(A, b, d, new_fixed_vars_mask, new_fixed_vars_values)
+
             maybe_optimal   = exp_lower_bound_fixed(c, d, new_fixed_vars_mask, new_fixed_vars_values) <= opt_val
+        
+
+            if not feasible:
+                printl(f'Unfeasible.')
+                continue
             
-        if not feasible:
-            printl(f'Unfeasible.')
+            if not maybe_optimal:
+                printl(f'Parent lower bound is {opt_val} but this can only go as low as {exp_lower_bound_fixed(c, d, new_fixed_vars_mask, new_fixed_vars_values)}, so we PRUNE!')
+                continue
+
+            current_node_data.fixed_vars_mask = new_fixed_vars_mask
+        
+        if (current_node_data.fixed_vars_mask == 1).all():
+            printl(f'Terminal node found, point {current_node_data.fixed_vars_values}')
+            final_val = exp_lower_bound_fixed(c, d, current_node_data.fixed_vars_mask, current_node_data.fixed_vars_values)
+            printl(f'THIS POINT GIVES VALUE: {final_val}')
+            if final_val == opt_val:
+                opt_points.append(current_node_data.fixed_vars_values)
+            elif final_val < opt_val:
+                opt_val = final_val
+                opt_points = [current_node_data.fixed_vars_values]
+
             continue
-        
-        if not maybe_optimal:
-            printl(f'Pruned.')
-            continue
-        
+
+        next_var_idx = current_node_data.next_var + 1
+        for next_value in d[next_var_idx].numbers:
+            new_node = BFSData(fixed_vars_mask=new_fixed_vars_mask,
+                                fixed_vars_values=new_fixed_vars_values,
+                                next_var=next_var_idx,
+                                next_var_val=next_value,
+                                level=current_node_data.level+1,
+                                parent=current_node_data,
+                                parent_opt=None) # TODO: Remove parent opt?
+
+            bfs_queue.append(new_node)
 
 
-
-        
+    print(f'opt val: {opt_val}')
+    print(f'opt_points: ')
+    for op in opt_points:
+        print(f'\t{op}')
         
 
         
