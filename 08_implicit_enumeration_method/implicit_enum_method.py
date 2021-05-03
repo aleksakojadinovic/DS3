@@ -62,8 +62,10 @@ def exp_lower_bound_fixed(linexp, domains, fixed_vars_mask, fixed_vars_values):
     return the_sum
 
 def check_constr_lower_bound_fixed(a, b, domains, fixed_vars_mask, fixed_vars_values):
-    
-    pass
+    return exp_lower_bound_fixed(a, domains, fixed_vars_mask, fixed_vars_values) <= b
+
+def check_all_constr_lower_bound_fixed(A, b_vec, domains, fixed_vars_mask, fixed_vars_values):
+    return all(check_all_constr_lower_bound_fixed(a, b, domains, fixed_vars_mask, fixed_vars_values) for a, b in zip(A, b_vec))
 
 def implicit_enum_method(c, A, b, d):
     r"""
@@ -79,7 +81,7 @@ def implicit_enum_method(c, A, b, d):
 
     n = len(c)
 
-    opt_val         = None
+    opt_val         = float('inf')
     opt_points      = []
 
     
@@ -92,26 +94,43 @@ def implicit_enum_method(c, A, b, d):
                                parent_opt           = exp_lower_bound(c, d))]
 
     while bfs_queue:
+
+        
+
         current_node_data = bfs_queue.pop(0)
+
+        def printl(*args, **kwargs):
+            print('\t'*current_node_data.level, *args, **kwargs)
+
         print(current_node_data)
 
-        # (1) Fix the variable that you're supposed to fix
-        #       - if the index of that variable is -1 it means we're at the root node
-        #       - so we just delegate
-        #       - if the index of that variable is greater than or equal to `n` (should always be `n`) 
-        #       - that means we're at a leaf node and we can cancel search
         if current_node_data.next_var >= n:
             print('\t'*current_node_data.level + 'Leaf node found, this branch is done!')
 
+        feasible        = True
+        maybe_optimal   = True
         if current_node_data.next_var != -1:
             # Now we fix another variable and we check for feasibility
+            new_fixed_vars_mask = current_node_data.fixed_vars_mask.copy()
+            new_fixed_vars_values = current_node_data.fixed_vars_values.copy()
 
-            pass
+            new_fixed_vars_mask[current_node_data.next_var] = 1
+            new_fixed_vars_values[current_node_data.next_var] = current_node_data.next_var_val
+
+            printl(f'Attempting to fix variable x_{current_node_data.next_var} to value {current_node_data.next_var_val}')
+
+            feasible        = check_all_constr_lower_bound_fixed(A, b, d, new_fixed_vars_mask, new_fixed_vars_values)
+            maybe_optimal   = exp_lower_bound_fixed(c, d, new_fixed_vars_mask, new_fixed_vars_values) <= opt_val
+            
+        if not feasible:
+            printl(f'Unfeasible.')
+            continue
+        
+        if not maybe_optimal:
+            printl(f'Pruned.')
+            continue
         
 
-        # (2) Recalculate the lower bound
-        #       - if lower bound greater than the current opt value then cancel search in this node
-        #       - otherwise continue search in this node
 
 
         
