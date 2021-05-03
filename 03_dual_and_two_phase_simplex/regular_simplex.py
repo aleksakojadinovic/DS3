@@ -53,6 +53,8 @@ def reg_simplex(simplex_matrix, basic_indices):
                 i0 = i
                 piv_min = piv_curr
 
+        if i0 is None:
+            return False, None, None
 
         ai0j0 = simplex_matrix[i0][j0]
         

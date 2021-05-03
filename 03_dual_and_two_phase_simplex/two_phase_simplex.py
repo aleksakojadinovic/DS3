@@ -1,5 +1,6 @@
 import numpy as np
 from regular_simplex import reg_simplex as r_simplex
+import lp_input_parser as lparse
 
 FLOAT_T = 'float32'
 
@@ -126,6 +127,9 @@ def two_phase_simplex_solver(c, eqA, eqb):
     x0length = sub_n - 1
     x0 = np.append(np.zeros(x0length - len(sub_b_vector)), sub_b_vector)
 
+    print(f'Sending to regular simplex:')
+    print(subA)
+
     indicator, last_matrix, last_basic_indices = r_simplex(subA, basic_indices)
 
     print(f'The algorithm was {"successful" if indicator else "UNSUCCESSFUL"}')
@@ -133,6 +137,9 @@ def two_phase_simplex_solver(c, eqA, eqb):
     print(last_matrix)
     print(f'Last list of basic:')
     print(last_basic_indices)
+
+    if not indicator:
+        return None
 
     phase_one_opt = last_matrix[-1, -1]
     print(f'Phase 1 opt: {phase_one_opt}')
@@ -275,5 +282,11 @@ def example4():
     b = [0, -3, 4]
     two_phase_simplex_solver(c, A, b)
 
+
+
 if __name__ == '__main__':
-    example4()
+    in_file = 'in.txt'
+    lines = lparse.read_lines_ds(in_file)
+    m, n = lparse.parse_matrix_dimensions(line[0])
+    A = lparse.parse_constraint_matrix(m, n, lines[1:1+m])
+
