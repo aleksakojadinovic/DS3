@@ -41,6 +41,13 @@ class BFSData:
         return '\r\n'.join([tab + head, tab + fvars, tab + fvals, tab + popt])
 
 
+def fixed_repr_to_str(fixed_vars_mask, fixed_vars_values, lvl=0):
+    n = len(fixed_vars_mask)
+    names = [f'x_{i}' for i in range(n)]
+    vals  = [str(v) if f == 1 else ' ? ' for f, v in zip(fixed_vars_mask, fixed_vars_values)]
+    tab = '\t'*lvl
+    return tab + (' | '.join(names)) + '\r\n' + tab + (' | '.join(vals))
+
 
 def mask_and_vals_to_list(mask, vals):
     return [(idx, v) for idx, flag, v in enumerate(zip(mask, vals)) if flag ==1]
@@ -89,8 +96,6 @@ def implicit_enum_method(c, A, b, d):
     opt_val         = float('inf')
     opt_points      = []
 
-    global_lower_bound = exp_lower_bound(c, d)
-
     
     bfs_queue       = [BFSData(fixed_vars_mask      = np.zeros(n), 
                                fixed_vars_values    = np.zeros(n),
@@ -100,19 +105,28 @@ def implicit_enum_method(c, A, b, d):
                                parent               = None,
                                parent_opt           = None)]
 
+    total_terminals = 0
+    total_pruned    = 0
+    total_entered   = 0
+
     while bfs_queue:
+        
+        current_node_data = bfs_queue.pop(0)
 
         
 
-        current_node_data = bfs_queue.pop(0)
-
         def printl(*args, **kwargs):
             print('\t'*current_node_data.level, *args, **kwargs)
+
+        printl('*****************entering bfs')
+        print(fixed_repr_to_str(current_node_data.fixed_vars_mask, current_node_data.fixed_vars_values, lvl=current_node_data.level))
 
         if current_node_data.next_var >= n:
             print('\t'*current_node_data.level + 'Leaf node found, this branch is done!')
             continue
         
+        total_entered += 1
+
         printl(f'GLOBAL OPTIMUM: {opt_val}')
         printl(f'Supposed to fix variable x_{current_node_data.next_var} to value {current_node_data.next_var_val}')
 
@@ -125,10 +139,11 @@ def implicit_enum_method(c, A, b, d):
             new_fixed_vars_mask[current_node_data.next_var] = 1
             new_fixed_vars_values[current_node_data.next_var] = current_node_data.next_var_val
             printl(f'Attempting to fix variable x_{current_node_data.next_var} to value {current_node_data.next_var_val}')
+            printl(f'\t - which gives {new_fixed_vars_values}')
 
             feasible        = check_all_constr_lower_bound_fixed(A, b, d, new_fixed_vars_mask, new_fixed_vars_values)
-
-            maybe_optimal   = exp_lower_bound_fixed(c, d, new_fixed_vars_mask, new_fixed_vars_values) <= opt_val
+            my_lb = exp_lower_bound_fixed(c, d, new_fixed_vars_mask, new_fixed_vars_values)
+            maybe_optimal   = my_lb <= opt_val
         
 
             if not feasible:
@@ -136,12 +151,23 @@ def implicit_enum_method(c, A, b, d):
                 continue
             
             if not maybe_optimal:
-                printl(f'Parent lower bound is {opt_val} but this can only go as low as {exp_lower_bound_fixed(c, d, new_fixed_vars_mask, new_fixed_vars_values)}, so we PRUNE!')
-                continue
+                printl('----PRUNING----')
+                printl(f'Global lower bound is {opt_val}')
+                printl(f'This can go as low as {my_lb}')
+                printl('---------------')
+                total_pruned += 1
+                continue    
+            else:
+                printl('---NOT PRUNING---')
+                printl(f'Because opt val is {opt_val}')
+                printl(f'And this can go as low as {my_lb}')
+                printl('---------------')
 
             current_node_data.fixed_vars_mask = new_fixed_vars_mask
+            current_node_data.fixed_vars_values = new_fixed_vars_values
         
         if (current_node_data.fixed_vars_mask == 1).all():
+            total_terminals += 1
             printl(f'Terminal node found, point {current_node_data.fixed_vars_values}')
             final_val = exp_lower_bound_fixed(c, d, current_node_data.fixed_vars_mask, current_node_data.fixed_vars_values)
             printl(f'THIS POINT GIVES VALUE: {final_val}')
@@ -154,7 +180,8 @@ def implicit_enum_method(c, A, b, d):
             continue
 
         next_var_idx = current_node_data.next_var + 1
-        for next_value in d[next_var_idx].numbers:
+        tmp_dom = list(d[next_var_idx].numbers)
+        for next_value in reversed(tmp_dom):
             new_node = BFSData(fixed_vars_mask=new_fixed_vars_mask,
                                 fixed_vars_values=new_fixed_vars_values,
                                 next_var=next_var_idx,
@@ -170,6 +197,10 @@ def implicit_enum_method(c, A, b, d):
     print(f'opt_points: ')
     for op in opt_points:
         print(f'\t{op}')
+
+    print(f'Terminals: {total_terminals}')
+    print(f'Pruned: {total_pruned}')
+    print(f'Entered: {total_entered}')
         
 
         
