@@ -1,6 +1,6 @@
 import numpy as np
-import portion as P
-from scipy.optimize import linprog
+import argparse
+import lp_input_parser as lpp
 
 class IntegerDomain:
 
@@ -41,6 +41,11 @@ class BFSData:
         return '\r\n'.join([tab + head, tab + fvars, tab + fvals, tab + popt])
 
 
+class ImplicitEnumerationResult:
+    def __init__(self):
+        
+        pass
+
 def fixed_repr_to_str(fixed_vars_mask, fixed_vars_values, lvl=0):
     n = len(fixed_vars_mask)
     names = [f'x_{i}' for i in range(n)]
@@ -53,9 +58,6 @@ def mask_and_vals_to_list(mask, vals):
     return [(idx, v) for idx, flag, v in enumerate(zip(mask, vals)) if flag ==1]
 
 def exp_lower_bound(linexp, domains):
-    r"""
-        Get the lower bound for a linear expression `linexp` where `domains` holds variable domains
-    """
     substitutes = np.array([d.upper if c < 0 else d.lower for d, c in zip(domains, linexp)])
     return np.dot(linexp, substitutes)
 
@@ -77,13 +79,15 @@ def check_all_constr_lower_bound_fixed(A, b_vec, domains, fixed_vars_mask, fixed
     return all(vals)
 
 
-def implicit_enum_method(c, A, b, d):
+def implicit_enum_method(c, A, b, d, log=False):
     r"""
         c       - Objective function c_0, .... c_n-1
         A, b    - Constraints Ax <= b
         d       - Integer domains d_0, ... d_n-1 for each variable
 
     """
+
+
     c = np.array(c)
     A = np.array(A)
     b = np.array(b)
@@ -110,6 +114,8 @@ def implicit_enum_method(c, A, b, d):
     total_entered   = 0
     total_unfeas    = 0
 
+
+    
     while bfs_queue:
         
         current_node_data = bfs_queue.pop(0)
@@ -117,10 +123,8 @@ def implicit_enum_method(c, A, b, d):
         
 
         def printl(*args, **kwargs):
-            print('\t'*current_node_data.level, *args, **kwargs)
-
-        printl('*****************entering bfs')
-        print(fixed_repr_to_str(current_node_data.fixed_vars_mask, current_node_data.fixed_vars_values, lvl=current_node_data.level))
+            if log:
+                print('\t'*current_node_data.level, *args, **kwargs)
 
         if current_node_data.next_var >= n:
             print('\t'*current_node_data.level + 'Leaf node found, this branch is done!')
@@ -128,8 +132,8 @@ def implicit_enum_method(c, A, b, d):
         
         total_entered += 1
 
-        printl(f'GLOBAL OPTIMUM: {opt_val}')
-        printl(f'Supposed to fix variable x_{current_node_data.next_var} to value {current_node_data.next_var_val}')
+        printl(f'> GLOBAL OPTIMUM: {opt_val}')
+        printl(f'> Supposed to fix variable x_{current_node_data.next_var} to value {current_node_data.next_var_val}')
 
         feasible        = True
         maybe_optimal   = True
@@ -200,23 +204,11 @@ def implicit_enum_method(c, A, b, d):
     for op in opt_points:
         print(f'\t{op}')
 
-    print(f'Entered: {total_entered}')
-    print(f'Unfeasible: {total_unfeas}')
-    print(f'Terminals: {total_terminals}')
-    print(f'Pruned: {total_pruned}')
+    print(f'Total nodes entered: {total_entered}')
+    print(f'Pruned as unfeasible: {total_unfeas}')
+    print(f'Pruned as unnecessary: {total_pruned}')
+    print(f'Total leaves entered: {total_terminals}')
     
-        
-
-        
-
-
-
-
-
-
-    
-
-
 
 def example1():
     c = [-4, -3, -3, -2]
@@ -249,4 +241,33 @@ def example3():
     implicit_enum_method(c, A, b, d)    
 
 if __name__ == '__main__':
-    example3()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', 
+                        '--input',
+                         help='The input file.',
+                         required=True)
+
+    parser.add_argument('-s',
+                        '--stats',
+                        action='store_true',
+                        help='Show algorithm executing statistics.')
+
+    parser.add_argument('-l',
+                        '--logging',
+                        action='store_true',
+                        help='Show log messages throughout the algorithm.')
+
+    args = parser.parse_args()
+    lines = lpp.read_lines_ds(args.input)
+
+    
+    m, n = lpp.parse_matrix_dimensions(lines[0])
+    c    = lpp.parse_n_floats(n, lines[1])
+    A, b = lpp.parse_constraint_matrix(m, n, lines[2:2+m])
+
+
+
+
+
+
+    
