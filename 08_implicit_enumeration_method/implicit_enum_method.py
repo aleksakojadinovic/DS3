@@ -205,7 +205,7 @@ def implicit_enum_method(c, A, b, d, log=False):
     result['p_unfeas']              = 0.0 if total_entered == 0 else 100.0 * total_unfeas / total_entered
     result['p_pruned']              = 0.0 if total_entered == 0 else 100.0 * total_pruned / total_entered   
 
-    result['algorith_time']         = end_time - start_time
+    result['execution_time']        = end_time - start_time
 
     return result
     
@@ -242,23 +242,26 @@ def example3():
 
 
 def print_result(result, options):
-    if options.maximize:
-        result['opt_val'] *= -1
-
     if options.logging:
         print('='*100)
-    print(f" >> {result['message']} << ")
-    if not result['bounded']:
-        return
 
-    print(f"Optimal function value:")
-    print(f"\t{result['opt_val']}")
-    print(f'Optimum reached for points:')
-    for opt_point in result['opt_points']:
-        print(f'\t{tuple(map(int, opt_point))}')
+    print(f" >> {result['message']} << ")
+
+    if result['bounded']:
+        print(f"Optimal function value:")
+        print(f"\t{result['opt_val']}")
+        print(f"Optimum reached for point{'s' if len(result['opt_points']) > 1 else ''}:")
+        for opt_point in result['opt_points']:
+            print(f'\t{tuple(map(int, opt_point))}')
 
     if options.stats:
         print('-'*40)
+        print(f"Execution time: {np.round(result['execution_time'], 5)}s")
+        print(f"Nodes entered: {result['n_entered']}")
+        print(f"Leaves entered: {result['n_terminals']}")
+        print(f"Branches pruned (as unfeasible): {result['n_unfeas']} - {np.round(result['p_unfeas'], 2)}%")
+        print(f"Branches pruned (as non-optimal): {result['n_pruned']} - {np.round(result['p_pruned'], 2)}%")   
+        
     
 
 if __name__ == '__main__':
@@ -291,5 +294,13 @@ if __name__ == '__main__':
     c    = lpp.parse_n_floats(n, lines[1])
     A, b = lpp.parse_constraint_matrix(m, n, lines[2:2+m])
     d    = [IntegerDomain.Binary() for _ in range(n)]
+
+    if args.maximize:
+        c *= -1
+
     res  = implicit_enum_method(c, A, b, d, log=args.logging)
+
+    if args.maximize:
+        res['opt_val'] *= -1
+
     print_result(res, args)
