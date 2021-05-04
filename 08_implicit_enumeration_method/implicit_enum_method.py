@@ -34,14 +34,8 @@ class BFSData:
 
 
 def exp_lower_bound_fixed(linexp, domains, fixed_vars_mask, fixed_vars_values):
-    the_sum = 0
-    for fflag, fval, d, coeff in zip(fixed_vars_mask, fixed_vars_values, domains, linexp):
-        if fflag == 1:
-            the_sum += coeff*fval
-        else:
-            the_sum += d.upper*coeff if coeff < 0 else d.lower*coeff
-    
-    return the_sum
+    vals = [coeff*fval if fflag == 1 else (coeff*d.upper if coeff < 0 else coeff*d.lower) for fflag, fval, d, coeff in zip(fixed_vars_mask, fixed_vars_values, domains, linexp)]
+    return sum(vals)
 
 def check_constr_lower_bound_fixed(a, b, domains, fixed_vars_mask, fixed_vars_values):
     return exp_lower_bound_fixed(a, domains, fixed_vars_mask, fixed_vars_values) <= b
