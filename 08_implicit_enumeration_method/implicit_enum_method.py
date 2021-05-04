@@ -160,7 +160,7 @@ def implicit_enum_method(c, A, b, d, log=False):
                 printl(f' >> This can only go as low as {my_lb}')
                 printl('---------------')
                 total_pruned += 1
-                continue    
+                continue
 
             current_node_data.fixed_vars_mask = new_fixed_vars_mask
             current_node_data.fixed_vars_values = new_fixed_vars_values

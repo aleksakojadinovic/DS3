@@ -1,0 +1,14 @@
+# Solving a zero-one knapsack problem
+# using implicit enumeration method
+# values  = [60, 100, 120]
+# weights = [10, 20,   30]
+# capacity = 50
+
+# Three variables (how much to take of each item) and one constraint
+1 3
+
+# Objective function is the sum of taken values
+60 100 120
+
+# Constraint is that sum of taken weights must not exceed the capacity
+10 20 30 <= 50
