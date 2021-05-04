@@ -24,25 +24,14 @@ class BFSData:
                  fixed_vars_values=None,
                  next_var=0,
                  next_var_val=None,
-                 level=0,
-                 parent=None,
-                 parent_opt=None):
+                 level=0):
 
         self.fixed_vars_mask        = fixed_vars_mask
         self.fixed_vars_values      = fixed_vars_values
         self.next_var               = next_var
         self.next_var_val           = next_var_val
         self.level                  = level
-        self.parent                 = parent
-        self.parent_opt             = parent_opt
 
-    def __str__(self):
-        head = ' -- Search Node --'
-        fvars = f'Fixed vars: {self.fixed_vars_mask}'
-        fvals = f'Fixed vals: {self.fixed_vars_values}' 
-        popt = f'Parent opt: {self.parent_opt}'
-        tab = '\t'*self.level
-        return '\r\n'.join([tab + head, tab + fvars, tab + fvals, tab + popt])
 
 def fixed_repr_to_str(fixed_vars_mask, fixed_vars_values, lvl=0):
     n = len(fixed_vars_mask)
@@ -103,9 +92,7 @@ def implicit_enum_method(c, A, b, d, log=False):
                                fixed_vars_values    = np.zeros(n),
                                next_var             = -1,
                                next_var_val         = None,
-                               level                = 0,
-                               parent               = None,
-                               parent_opt           = None)]
+                               level                = 0)]
 
     total_terminals = 0
     total_pruned    = 0
@@ -179,15 +166,12 @@ def implicit_enum_method(c, A, b, d, log=False):
             continue
 
         next_var_idx = current_node_data.next_var + 1
-        tmp_dom = list(d[next_var_idx].numbers)
-        for next_value in reversed(tmp_dom):
+        for next_value in d[next_var_idx].numbers:
             new_node = BFSData(fixed_vars_mask=new_fixed_vars_mask,
                                 fixed_vars_values=new_fixed_vars_values,
                                 next_var=next_var_idx,
                                 next_var_val=next_value,
-                                level=current_node_data.level+1,
-                                parent=current_node_data,
-                                parent_opt=None) # TODO: Remove parent opt?
+                                level=current_node_data.level+1)
 
             bfs_queue.append(new_node)
 
