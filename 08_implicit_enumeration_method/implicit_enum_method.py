@@ -131,8 +131,7 @@ def implicit_enum_method(c, A, b, d, log=False):
         
         total_entered += 1
 
-        printl(f'> GLOBAL OPTIMUM: {opt_val}')
-        printl(f'> Supposed to fix variable x_{current_node_data.next_var} to value {current_node_data.next_var_val}')
+        printl(f'> Current global optimum: {opt_val}')
 
         feasible        = True
         maybe_optimal   = True
@@ -142,7 +141,7 @@ def implicit_enum_method(c, A, b, d, log=False):
             # Now we fix another variable and we check for feasibility
             new_fixed_vars_mask[current_node_data.next_var] = 1
             new_fixed_vars_values[current_node_data.next_var] = current_node_data.next_var_val
-            printl(f'Attempting to fix variable x_{current_node_data.next_var} to value {current_node_data.next_var_val}')
+            printl(f' > Attempting to fix variable x_{current_node_data.next_var} to value {current_node_data.next_var_val}')
             printl(f'\t - which gives {new_fixed_vars_values}')
 
             feasible        = check_all_constr_lower_bound_fixed(A, b, d, new_fixed_vars_mask, new_fixed_vars_values)
@@ -157,25 +156,20 @@ def implicit_enum_method(c, A, b, d, log=False):
             
             if not maybe_optimal:
                 printl('----PRUNING----')
-                printl(f'Global lower bound is {opt_val}')
-                printl(f'This can go as low as {my_lb}')
+                printl(f' >> Global lower bound is {opt_val}')
+                printl(f' >> This can only go as low as {my_lb}')
                 printl('---------------')
                 total_pruned += 1
                 continue    
-            else:
-                printl('---NOT PRUNING---')
-                printl(f'Because opt val is {opt_val}')
-                printl(f'And this can go as low as {my_lb}')
-                printl('---------------')
 
             current_node_data.fixed_vars_mask = new_fixed_vars_mask
             current_node_data.fixed_vars_values = new_fixed_vars_values
         
         if (current_node_data.fixed_vars_mask == 1).all():
             total_terminals += 1
-            printl(f'Terminal node found, point {current_node_data.fixed_vars_values}')
+            printl(f' >> Terminal node found, point {current_node_data.fixed_vars_values}')
             final_val = exp_lower_bound_fixed(c, d, current_node_data.fixed_vars_mask, current_node_data.fixed_vars_values)
-            printl(f'THIS POINT GIVES VALUE: {final_val}')
+            printl(f'\t -- with value: {final_val}')
             if final_val == opt_val:
                 opt_points.append(current_node_data.fixed_vars_values)
             elif final_val < opt_val:
@@ -246,11 +240,28 @@ def example3():
 
     implicit_enum_method(c, A, b, d)    
 
+
 def print_result(result, options):
-    pass
+    if options.maximize:
+        result['opt_val'] *= -1
+
+    if options.logging:
+        print('='*100)
+    print(f" >> {result['message']} << ")
+    if not result['bounded']:
+        return
+
+    print(f"Optimal function value:")
+    print(f"\t{result['opt_val']}")
+    print(f'Optimum reached for points:')
+    for opt_point in result['opt_points']:
+        print(f'\t{tuple(map(int, opt_point))}')
+
+    if options.stats:
+        print('-'*40)
+    
 
 if __name__ == '__main__':
-    # example1()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', 
                         '--input',
@@ -267,10 +278,14 @@ if __name__ == '__main__':
                         action='store_true',
                         help='Show log messages throughout the algorithm.')
 
+    parser.add_argument('-m',
+                        '--maximize',
+                        action='store_true',
+                        help='Maximize the objective function (minimization is default).')
+
 
     args = parser.parse_args()
     lines = lpp.read_lines_ds(args.input)
-
     
     m, n = lpp.parse_matrix_dimensions(lines[0])
     c    = lpp.parse_n_floats(n, lines[1])
