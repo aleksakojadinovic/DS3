@@ -3,14 +3,14 @@ import argparse
 import lp_input_parser as lpp
 import time
 
-INT_T   = 'int64'
-FLOAT_T = 'float64'
-
 class IntegerDomain:
-
     @staticmethod
     def Binary():
         return IntegerDomain([0, 1])
+    
+    @staticmethod
+    def ZeroToN(N):
+        return IntegerDomain(list(range(N + 1)))
     
 
     def __init__(self, numbers):
@@ -32,21 +32,6 @@ class BFSData:
         self.next_var_val           = next_var_val
         self.level                  = level
 
-
-def fixed_repr_to_str(fixed_vars_mask, fixed_vars_values, lvl=0):
-    n = len(fixed_vars_mask)
-    names = [f'x_{i}' for i in range(n)]
-    vals  = [str(v) if f == 1 else ' ? ' for f, v in zip(fixed_vars_mask, fixed_vars_values)]
-    tab = '\t'*lvl
-    return tab + (' | '.join(names)) + '\r\n' + tab + (' | '.join(vals))
-
-
-def mask_and_vals_to_list(mask, vals):
-    return [(idx, v) for idx, flag, v in enumerate(zip(mask, vals)) if flag ==1]
-
-def exp_lower_bound(linexp, domains):
-    substitutes = np.array([d.upper if c < 0 else d.lower for d, c in zip(domains, linexp)])
-    return np.dot(linexp, substitutes)
 
 def exp_lower_bound_fixed(linexp, domains, fixed_vars_mask, fixed_vars_values):
     the_sum = 0
@@ -113,7 +98,7 @@ def implicit_enum_method(c, A, b, d, log=False):
                 print('\t'*current_node_data.level, *args, **kwargs)
 
         if current_node_data.next_var >= n:
-            print('\t'*current_node_data.level + 'Leaf node found, this branch is done!')
+            printl('\t'*current_node_data.level + 'Leaf node found, this branch is done!')
             continue
         
         total_entered += 1
@@ -193,37 +178,6 @@ def implicit_enum_method(c, A, b, d, log=False):
 
     return result
     
-
-def example1():
-    c = [-4, -3, -3, -2]
-    A = [[2, -2, 1, 4],
-         [2, 3, -2, 5],
-         [1, 4, 5, -1]]
-    b = [5, 7, 6]
-    d = [IntegerDomain.Binary() for _ in c]
-
-    implicit_enum_method(c, A, b, d)    
-
-
-def example2():
-    c = [-9, -5, -6, -4]
-    A = [[6, 3, 5, 2],
-         [0, 0, -1, 1],
-         [-1, 0, 1, 0],
-         [0, -1, 0, 1]]
-    b = [10, 1, 0, 0]
-    d = [IntegerDomain.Binary() for _ in c]
-
-    implicit_enum_method(c, A, b, d)    
-
-def example3():
-    c = [-12, -8, -7, -6]
-    A = [[8, 6, 5, 4]]
-    b = [15]
-    d = [IntegerDomain.Binary() for _ in c]
-
-    implicit_enum_method(c, A, b, d)    
-
 
 def print_result(result, options):
     if options.logging:
