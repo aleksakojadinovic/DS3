@@ -1,6 +1,10 @@
 import numpy as np
 import argparse
 import lp_input_parser as lpp
+import time
+
+INT_T   = 'int64'
+FLOAT_T = 'float64'
 
 class IntegerDomain:
 
@@ -39,12 +43,6 @@ class BFSData:
         popt = f'Parent opt: {self.parent_opt}'
         tab = '\t'*self.level
         return '\r\n'.join([tab + head, tab + fvars, tab + fvals, tab + popt])
-
-
-class ImplicitEnumerationResult:
-    def __init__(self):
-        
-        pass
 
 def fixed_repr_to_str(fixed_vars_mask, fixed_vars_values, lvl=0):
     n = len(fixed_vars_mask)
@@ -115,6 +113,7 @@ def implicit_enum_method(c, A, b, d, log=False):
     total_unfeas    = 0
 
 
+    start_time = time.time()
     
     while bfs_queue:
         
@@ -198,21 +197,28 @@ def implicit_enum_method(c, A, b, d, log=False):
 
             bfs_queue.append(new_node)
 
+    end_time = time.time()
 
-    print(f'opt val: {opt_val}')
-    print(f'opt_points: ')
-    for op in opt_points:
-        print(f'\t{op}')
+    result = dict()
+    result['bounded']               = len(opt_points) > 0
+    result['message']               = f'Optimal solution found.' if result['bounded'] else f'Function is unbounded.'
+    result['opt_val']               = opt_val
+    result['opt_points']            = opt_points
+    result['n_entered']             = total_entered
+    result['n_unfeas']              = total_unfeas
+    result['n_pruned']              = total_pruned
+    result['n_terminals']           = total_terminals
+    result['p_unfeas']              = 0.0 if total_entered == 0 else 100.0 * total_unfeas / total_entered
+    result['p_pruned']              = 0.0 if total_entered == 0 else 100.0 * total_pruned / total_entered   
 
-    print(f'Total nodes entered: {total_entered}')
-    print(f'Pruned as unfeasible: {total_unfeas}')
-    print(f'Pruned as unnecessary: {total_pruned}')
-    print(f'Total leaves entered: {total_terminals}')
+    result['algorith_time']         = end_time - start_time
+
+    return result
     
 
 def example1():
     c = [-4, -3, -3, -2]
-    A = [[-2, -2, 1, 4],
+    A = [[2, -2, 1, 4],
          [2, 3, -2, 5],
          [1, 4, 5, -1]]
     b = [5, 7, 6]
@@ -240,7 +246,11 @@ def example3():
 
     implicit_enum_method(c, A, b, d)    
 
+def print_result(result, options):
+    pass
+
 if __name__ == '__main__':
+    # example1()
     parser = argparse.ArgumentParser()
     parser.add_argument('-i', 
                         '--input',
@@ -250,12 +260,13 @@ if __name__ == '__main__':
     parser.add_argument('-s',
                         '--stats',
                         action='store_true',
-                        help='Show algorithm executing statistics.')
+                        help='Show statistics about algorithm execution.')
 
     parser.add_argument('-l',
                         '--logging',
                         action='store_true',
                         help='Show log messages throughout the algorithm.')
+
 
     args = parser.parse_args()
     lines = lpp.read_lines_ds(args.input)
@@ -264,10 +275,6 @@ if __name__ == '__main__':
     m, n = lpp.parse_matrix_dimensions(lines[0])
     c    = lpp.parse_n_floats(n, lines[1])
     A, b = lpp.parse_constraint_matrix(m, n, lines[2:2+m])
-
-
-
-
-
-
-    
+    d    = [IntegerDomain.Binary() for _ in range(n)]
+    res  = implicit_enum_method(c, A, b, d, log=args.logging)
+    print_result(res, args)
