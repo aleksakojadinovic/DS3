@@ -1,6 +1,7 @@
 # Implicit enumeration method
 
 Zero-one programming problem solver using implicit enumeration method.
+
 *Note: Theoretically it can work with any finite integer set (not just zero-one) but for now parsing that kind of input is not supported. If needed it can be manually done within the code.*
 __________________________________________
 ### Usage:
