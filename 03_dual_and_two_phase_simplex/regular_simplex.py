@@ -20,6 +20,12 @@ def pivot_basis(simplex_matrix, basic_indices, i0, j0):
 def reg_simplex(simplex_matrix, basic_indices):
     simplex_matrix = np.array(simplex_matrix)
     basic_indices = np.array(basic_indices)
+    for i in range(len(simplex_matrix) - 1):
+        if simplex_matrix[i][-1] < 0:
+            simplex_matrix[i] *= -1
+
+    print(f'RS: Transformed to')
+    print(simplex_matrix)
 
     sim_m, sim_n = simplex_matrix.shape
     for i in range(sim_m - 1):
