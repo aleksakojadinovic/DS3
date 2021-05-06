@@ -29,9 +29,7 @@ def prep_for_phase_one(eqA):
         if is_basic:
             basic_column_indices.append(j)
             basic_missing.remove(np.nonzero(column)[0])
-            print(f'\t\t Column {column} is basic.')
-        else:
-            print(f'\t\t Column {column} is NOT basic.')
+
 
 
     
@@ -58,7 +56,6 @@ def simple_prep(eqA):
     return subA, list(range(n, n + m))
 
 def adv_prep(eqA, eqb):
-    print(eqA)
     eqA = np.array(eqA, dtype=FLOAT_T)
     eqb = np.array(eqb, dtype=FLOAT_T)
     
@@ -77,8 +74,6 @@ def adv_prep(eqA, eqb):
     if len(unit_column_indices) == m:
         return eqA, eqb, unit_column_indices, [], []
 
-    print(f'Unit column indices are: {unit_column_indices}')
-    print(f'Unit columns at rows:    {unit_column_row_indices}')
     
     # Divide them all by their coefficients in order for them to be truly unit
     for row_idx, col_idx in zip(unit_column_row_indices, unit_column_indices):
@@ -86,9 +81,6 @@ def adv_prep(eqA, eqb):
         eqA[row_idx] /= coeff
         eqb[row_idx] /= coeff
 
-    print(f'Now truly unit:')
-    print(eqA)
-    print(eqb)
 
     artificial_unit_row_indices        = [i for i in range(m) if i not in unit_column_row_indices]
     artificial_unit_column_indices  = []
@@ -115,10 +107,7 @@ def adv_prep(eqA, eqb):
 # Construct sub-problem matrix by adding artificial
 # objective funcion and do the pivoting thingy
 def get_sub_simplex_matrix(subA, eqb, artificial_indices, artificial_row_indices):
-    print(f'Creating sub simplex matrix with: ')
-    print(subA)
-    print(eqb)
-    print(f'artifical: {artificial_indices}')
+
     m, n = subA.shape
     num_artif = len(artificial_indices)
     # m + 1 for the new objective function
@@ -129,14 +118,10 @@ def get_sub_simplex_matrix(subA, eqb, artificial_indices, artificial_row_indices
     sub_simplex_matrix[-1, n - num_artif:-1] = np.ones(num_artif)
     
 
-    print(f'sub before gauss:')
-    print(sub_simplex_matrix)
 
     for ar in artificial_row_indices:
         sub_simplex_matrix[-1, :] -= sub_simplex_matrix[ar, :]
 
-    print(f'sub after gauss: ')
-    print(sub_simplex_matrix)
 
     return sub_simplex_matrix
 
@@ -177,39 +162,25 @@ def two_phase_simplex_solver(c, eqA, eqb):
     if m != len(eqb):
         raise ValueError(f'eqA has {m} constraints but b-vector has {len(eqb)} values')
 
-    # print_constraints(eqA, eqb, ['=' for _ in range(m)], index_from_zero=True)
 
     eqA, eqb, basic_indices, artificial_indices, artificial_row_indices = adv_prep(eqA, eqb)
-    subA = get_sub_simplex_matrix(eqA, eqb, artificial_indices, artificial_row_indices)
-    print(subA)
 
-    print(f'sub simplex:')
-    print(subA)
-    # print(f'For phase 1: ')
-    # print(subA)
-    # print(f'where basic: {basic_indices}')
-    # print(f'and non basic: {non_basic_indices}')
+    # TODO: If no artificial just use run simplex!
+
+    subA = get_sub_simplex_matrix(eqA, eqb, artificial_indices, artificial_row_indices)
+
     sub_m, sub_n = subA.shape
     sub_b_vector = subA[:-1, -1]
     x0length = sub_n - 1
     x0 = np.append(np.zeros(x0length - len(sub_b_vector)), sub_b_vector)
 
-    print(f'Sending to regular simplex:')
-    print(subA)
-
     indicator, last_matrix, last_basic_indices = r_simplex(subA, basic_indices)
 
-    print(f'The algorithm was {"successful" if indicator else "UNSUCCESSFUL"}')
-    print(f'last simplex matrix: ')
-    print(last_matrix)
-    print(f'Last list of basic:')
-    print(last_basic_indices)
-
     if not indicator:
+        print(f'Phase one no solution.')
         return None
 
     phase_one_opt = last_matrix[-1, -1]
-    print(f'Phase 1 opt: {phase_one_opt}')
 
     if not np.isclose(phase_one_opt, 0.0):
         print(f'Phase one opt is nonzero, no solution then.')
@@ -219,13 +190,11 @@ def two_phase_simplex_solver(c, eqA, eqb):
 
 
     # first we remove all artificial variables that are not basic
-    print(f'artificial: {artificial_indices}')
     cols_to_delete = []
     for artif_index in artificial_indices:
         if artif_index in last_basic_indices:
             continue
         cols_to_delete.append(artif_index)
-        print(f'Variable {artif_index} is artif. and nonbasic, so we remove that column')
 
     artificial_indices = [a for a in artificial_indices if a not in cols_to_delete]
     last_basic_indices = [a for a in last_basic_indices if a not in cols_to_delete]
@@ -289,8 +258,11 @@ def two_phase_simplex_solver(c, eqA, eqb):
     ind, mat, _ = r_simplex(phase_two_matrix, [])
 
     if ind:
-        print(mat)
-        print(f'OPTIMAL: {-np.round(mat[-1, -1], 8)}')
+        opt = -np.round(mat[-1, -1], 8)
+        return opt
+    else:
+        print(f'Phase two simplex no solution.')
+        return None
     
     
     
@@ -302,7 +274,8 @@ def example1():
 
     b = [3, 12, 3]
 
-    two_phase_simplex_solver(c, A, b)
+    mp = two_phase_simplex_solver(c, A, b)
+    print(mp)
     sp = linprog(c, A_eq=A, b_eq=b)
     print(sp['message'])
     print(sp['fun'])
@@ -318,7 +291,8 @@ def example2():
 
     b = [10, 2, 6, 1]
 
-    two_phase_simplex_solver(c, A, b)
+    mp = two_phase_simplex_solver(c, A, b)
+    print(mp)
     sp = linprog(c, A_eq=A, b_eq=b)
     print(sp['message'])
     print(sp['fun'])
@@ -332,41 +306,14 @@ def example3():
 
     b = [10, -2, 6, 1]
 
-    two_phase_simplex_solver(c, A, b)
+    mp = two_phase_simplex_solver(c, A, b)
     sp = linprog(c, A_eq=A, b_eq=b)
+    print(mp)
     print(sp['message'])
     print(sp['fun'])
-
-def example4():
-    c = [7, 4, 1, 0, 0, 0]
-    A = [[-2, 1, 1, 1, 0, 0],
-         [-1, -2, -1, 0, 1, 0],
-         [1, -1, 2, 0, 0, 1]]
-
-    b = [0, -3, 4]
-    two_phase_simplex_solver(c, A, b)
-
-def example5():
-    # minimize
-    # 6x1 + 3x2
-    # subject to constraints
-    # -x1 - x2 <= -1
-    # -2x1 + x2 <= -1
-    # 3x2 <= 2
-
-    c = [ 6 , 3, 0, 0, 0]
-    A = [[-1, -1, 1, 0, 0],
-         [-2,  1, 0, 1, 0],
-         [ 0,  3, 0, 0, 1]]
-    b = [-1, -1, 2]
-    two_phase_simplex_solver(c, A, b)
 
 
 if __name__ == '__main__':
     example3()
-    # fake_example()
-    # in_file = 'in.txt'
-    # lines = lparse.read_lines_ds(in_file)
-    # m, n = lparse.parse_matrix_dimensions(line[0])
-    # A = lparse.parse_constraint_matrix(m, n, lines[1:1+m])
+
 

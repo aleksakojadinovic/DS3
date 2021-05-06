@@ -24,8 +24,6 @@ def reg_simplex(simplex_matrix, basic_indices):
         if simplex_matrix[i][-1] < 0:
             simplex_matrix[i] *= -1
 
-    print(f'RS: Transformed to')
-    print(simplex_matrix)
 
     sim_m, sim_n = simplex_matrix.shape
     for i in range(sim_m - 1):
