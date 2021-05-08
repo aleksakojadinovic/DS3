@@ -201,9 +201,6 @@ def two_phase_simplex_solver(c, eqA, eqb):
         print(f'it is: {phase_one_opt}')
         return None
 
-
-
-    # first we remove all artificial variables that are not basic
     cols_to_delete = []
     for artif_index in artificial_indices:
         if artif_index in last_basic_indices:
@@ -222,8 +219,6 @@ def two_phase_simplex_solver(c, eqA, eqb):
         row = new_matrix[row_idx]
         
         if (len(row[row == 0]) == len(row) - 1):
-
-            # TODO: remove this row and this column
             artificial_indices.remove(art_and_basic)
             last_basic_indices.remove(art_and_basic)
             cols_to_delete.append(art_and_basic)
