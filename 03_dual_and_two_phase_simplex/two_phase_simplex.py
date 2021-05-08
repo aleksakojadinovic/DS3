@@ -147,6 +147,20 @@ def find_basic_columns(mat):
 
     return bs
 
+def remove_columns_and_fix_index_lists(matrix, cols_to_delete, index_lists):
+    for j, col_to_delete in enumerate(cols_to_delete):
+        for index_list in index_lists:
+            for i in range(len(index_list)):
+                if index_list[i] >= col_to_delete:
+                    index_list[i] -= 1
+
+        for k in range(j+1, len(cols_to_delete)):
+            if cols_to_delete[k] >= col_to_delete:
+                cols_to_delete[k] -= 1
+
+        matrix = np.delete(matrix, [col_to_delete], axis=1)
+
+    return matrix, index_lists
 
 # Assumes all constrains have been converted to equalities
 def two_phase_simplex_solver(c, eqA, eqb):
@@ -199,21 +213,7 @@ def two_phase_simplex_solver(c, eqA, eqb):
     artificial_indices = [a for a in artificial_indices if a not in cols_to_delete]
     last_basic_indices = [a for a in last_basic_indices if a not in cols_to_delete]
 
-    new_matrix = last_matrix.copy()
-    for j, col_to_delete in enumerate(cols_to_delete):
-        for i in range(len(artificial_indices)):
-            if artificial_indices[i] >= col_to_delete:
-                artificial_indices[i] -= 1
-        for i in range(len(last_basic_indices)):
-            if last_basic_indices[i] >= col_to_delete:
-                last_basic_indices[i] -= 1
-
-        for k in range(j+1, len(cols_to_delete)):
-            if cols_to_delete[k] >= col_to_delete:
-                cols_to_delete[k] -= 1
-
-        new_matrix = np.delete(new_matrix, [col_to_delete], axis=1)
-
+    new_matrix, [artificial_indices, last_basic_indices] = remove_columns_and_fix_index_lists(last_matrix, cols_to_delete, [artificial_indices, last_basic_indices])
 
     cols_to_delete = []
     for art_and_basic in artificial_indices:
@@ -229,23 +229,9 @@ def two_phase_simplex_solver(c, eqA, eqb):
             cols_to_delete.append(art_and_basic)
             new_matrix = np.delete(new_matrix, [row_idx], axis=0)
 
-
-    new_matrix = new_matrix.copy()
-    for j, col_to_delete in enumerate(cols_to_delete):
-        for i in range(len(artificial_indices)):
-            if artificial_indices[i] >= col_to_delete:
-                artificial_indices[i] -= 1
-        for i in range(len(last_basic_indices)):
-            if last_basic_indices[i] >= col_to_delete:
-                last_basic_indices[i] -= 1
-
-        for k in range(j+1, len(cols_to_delete)):
-            if cols_to_delete[k] >= col_to_delete:
-                cols_to_delete[k] -= 1
-
-        new_matrix = np.delete(new_matrix, [col_to_delete], axis=1)   
+ 
+    new_matrix, [artificial_indices, last_basic_indices] = remove_columns_and_fix_index_lists(new_matrix, cols_to_delete, [artificial_indices, last_basic_indices])
         
-
     new_matrix_n = new_matrix.shape[1]
     if new_matrix_n == len(c):
         new_matrix[-1, :] = np.vstack((new_matrix, c))
@@ -307,13 +293,13 @@ def example3():
     b = [10, -2, 6, 1]
 
     mp = two_phase_simplex_solver(c, A, b)
-    sp = linprog(c, A_eq=A, b_eq=b)
     print(mp)
+    sp = linprog(c, A_eq=A, b_eq=b)
     print(sp['message'])
     print(sp['fun'])
 
 
 if __name__ == '__main__':
-    example3()
+    example2()
 
 
