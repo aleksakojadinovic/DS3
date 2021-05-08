@@ -17,7 +17,7 @@ def pivot_basis(simplex_matrix, basic_indices, i0, j0):
 
     return list(basic_indices)
 
-def reg_simplex(simplex_matrix, basic_indices):
+def reg_simplex(simplex_matrix, basic_indices, phase=1):
     simplex_matrix = np.array(simplex_matrix)
     basic_indices = np.array(basic_indices)
     for i in range(len(simplex_matrix) - 1):
@@ -37,6 +37,8 @@ def reg_simplex(simplex_matrix, basic_indices):
         c = simplex_matrix[-1, :-1]
         b = simplex_matrix[:-1, -1]
         if (c >= 0).all():
+            if phase == 2:
+                print(f'PHASE 2 BASIC: {basic_indices}')
             return True, simplex_matrix, basic_indices
 
         j0 = np.argwhere(c < 0)[0][0]

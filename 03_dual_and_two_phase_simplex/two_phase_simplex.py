@@ -3,6 +3,7 @@ from regular_simplex import reg_simplex as r_simplex
 import lp_input_parser as lparse
 import sys
 from scipy.optimize import linprog
+import warnings
 
 FLOAT_T = 'float32'
 
@@ -162,6 +163,13 @@ def remove_columns_and_fix_index_lists(matrix, cols_to_delete, index_lists):
 
     return matrix, index_lists
 
+def fetch_sol_from_simplex_matrix(simplex_matrix):
+    m, n = simplex_matrix.shape
+    sol = np.zeros(n - 1)
+    right_part = simplex_matrix[:, -1] # length m
+    sol[n - 1 - m:] = right_part
+    return sol
+
 # Assumes all constrains have been converted to equalities
 def two_phase_simplex_solver(c, eqA, eqb):
     c   = np.array(c, dtype=FLOAT_T)
@@ -236,16 +244,34 @@ def two_phase_simplex_solver(c, eqA, eqb):
         new_matrix[-1, :] = new_target
 
     phase_two_matrix = piv_artif(new_matrix, find_basic_columns(new_matrix[:-1, :-1]))
-    ind, mat, _ = r_simplex(phase_two_matrix, [])
+    phase_two_A, phase_two_b, phase_two_basic, _, _  = adv_prep(phase_two_matrix[:-1, :-1], phase_two_matrix[:-1, -1])
+    phase_two_matrix[:-1, :-1] = phase_two_A
+    phase_two_matrix[:-1, -1] = phase_two_b
+    ind, mat, basic = r_simplex(phase_two_matrix, phase_two_basic, phase=2)
 
     if ind:
-        opt = -np.round(mat[-1, -1], 8)
-        return opt
+        opt         = -np.round(mat[-1, -1], 8)
+        opt_point = fetch_sol_from_simplex_matrix(mat)
+        return opt, np.around(opt_point, 8)
     else:
         print(f'Phase two simplex no solution.')
         return None
     
+
+def test_against_scipy(A, b, c):
+    warnings.filterwarnings("ignore")
+    print(f'Me: ')
+    opt, opt_point = two_phase_simplex_solver(c, A, b)
+    print(f'Optimal value: {opt} reached with x={opt_point}')
+    print(f'\t for function {c}')
+
+    print('===========')
     
+    print(f'Scipy: ')
+    sp = linprog(c, A_eq=A, b_eq=b, method='simplex')
+    print(f'Optimal value: {sp["fun"]} reached with x={sp["x"]}')
+
+    print(f'==============================================================================')
     
 def example1():
     c = [2, 0, 3, 1]
@@ -255,11 +281,7 @@ def example1():
 
     b = [3, 12, 3]
 
-    mp = two_phase_simplex_solver(c, A, b)
-    print(mp)
-    sp = linprog(c, A_eq=A, b_eq=b)
-    print(sp['message'])
-    print(sp['fun'])
+    test_against_scipy(A, b, c)
 
 
 
@@ -272,11 +294,7 @@ def example2():
 
     b = [10, 2, 6, 1]
 
-    mp = two_phase_simplex_solver(c, A, b)
-    print(mp)
-    sp = linprog(c, A_eq=A, b_eq=b)
-    print(sp['message'])
-    print(sp['fun'])
+    test_against_scipy(A, b, c)
 
 def example3():
     c = [3, 1, 4, 0, 0, 0, 0]
@@ -287,14 +305,11 @@ def example3():
 
     b = [10, -2, 6, 1]
 
-    mp = two_phase_simplex_solver(c, A, b)
-    print(mp)
-    sp = linprog(c, A_eq=A, b_eq=b)
-    print(sp['message'])
-    print(sp['fun'])
-
+    test_against_scipy(A, b, c)
 
 if __name__ == '__main__':
+    example1()
     example2()
+    example3()
 
 
