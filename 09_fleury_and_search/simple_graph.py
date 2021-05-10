@@ -57,7 +57,7 @@ class SimpleGraph:
 
         return SimpleGraph.EULER_HAS_NOTHING
 
-    def traversal_(self, start_node, callback, pop_func):
+    def traversal_(self, start_node, callback, pop_func, ordered):
         
         if start_node < 0 or start_node >= self.num_nodes:
             raise ValueError(f'Invalid start node in traversal: {start_node}')
@@ -65,32 +65,38 @@ class SimpleGraph:
         nodes = [start_node]
         visited = [False for _ in range(self.num_nodes)]
 
+        adj_list = copy.deepcopy(self.adj_list)
+        if ordered:
+            adj_list = [[] for i in range(self.num_nodes)]
+            for key in self.adj_list.keys():
+                adj_list[key] = sorted(list(self.adj_list[key]))
+
         while nodes:
             
             node = pop_func(nodes)
             visited[node] = True
             callback(node, visited)
 
-            for x in self.adj_list[node]:
+            for x in adj_list[node]:
                 if visited[x]:
                     continue
                 nodes.append(x)
 
         return visited
 
-    def dfs(self, start_node=None, callback=None):
+    def dfs(self, start_node=None, callback=None, ordered=False):
         if start_node is None:
             start_node = 0
         if callback is None:
             callback = SimpleGraph.dummy_callback
-        return self.traversal_(start_node, callback, SimpleGraph.stack_pop)
+        return self.traversal_(start_node, callback, SimpleGraph.stack_pop, ordered)
 
-    def bfs(self, start_node=None, callback=None):
+    def bfs(self, start_node=None, callback=None, ordered=False):
         if start_node is None:
             start_node = 0
         if callback is None:
             callback = SimpleGraph.dummy_callback
-        return self.traversal_(start_node, callback, SimpleGraph.queue_pop)
+        return self.traversal_(start_node, callback, SimpleGraph.queue_pop, ordered)
 
 
     def fleury(self):
