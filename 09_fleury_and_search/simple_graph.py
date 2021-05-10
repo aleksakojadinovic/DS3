@@ -24,20 +24,25 @@ class SimpleGraph:
         self.adj_list = defaultdict(set)
         self.degrees  = [0 for _ in range(self.num_nodes)]
 
-    def connect(self, node_from, node_to, directed=False):
+    def connect(self, node_from, node_to):
+        if node_to in self.adj_list[node_from]:
+            return
         self.adj_list[node_from].add(node_to)
         self.degrees[node_to] += 1
+        self.adj_list[node_to].add(node_from)
+        self.degrees[node_from] += 1
+
         self.num_edges += 1
-        if not directed:
-            self.adj_list[node_to].add(node_from)
-            self.degrees[node_from] += 1
     
     def disconnect(self, node_from, node_to, directed=False):
+        if node_to not in self.adj_list[node_from]:
+            return
         self.adj_list[node_from].remove(node_to)
         self.degrees[node_to] -= 1
-        if not directed:
-            self.adj_list[node_to].remove(node_from)
-            self.degrees[node_from] -= 1
+        self.adj_list[node_to].remove(node_from)
+        self.degrees[node_from] -= 1
+
+        self.num_edges -= 1
 
     def get_active_nodes(self):
         return list(self.adj_list.keys())

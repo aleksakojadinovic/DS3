@@ -1,5 +1,8 @@
-from simple_graph import SimpleGraph
 import copy 
+import argparse
+from simple_graph import SimpleGraph
+import graph_parser as gp
+
 
 def get_euler_start_node(graph):
     ec = graph.euler_check()
@@ -88,6 +91,25 @@ def example3():
     print(fleury_algorithm(g))
 
 if __name__ == '__main__':
-    example3()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', 
+                        '--input',
+                         help='The input file',
+                         required=True)
+    
+
+    parser.add_argument('-s',
+                        '--style',
+                        required=True,
+                        default='adj_list',
+                        help='Input style, either `adj_list` or `matrix`.')
+
+
+    args = parser.parse_args()
+    g = gp.parse_input(args.input, style=args.style)    
+    print(fleury_algorithm(g))
+
+
+
     
         
