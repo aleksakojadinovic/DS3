@@ -1,0 +1,7 @@
+# Number of nodes
+5
+# Src - dst
+1 - 0, 2
+0 - 2, 3
+3 - 4, 2, 1
+2 - 4
