@@ -62,15 +62,58 @@ def parse_adj_list(lines):
 
     return g
 
+def parse_row(line):
+    i, row = line
+    row = row.split(" ")
+    try:
+        row = list(map(int, row))
+        return row
+    except:
+        fatal_parse_error(f'Failed to parse {row}, ints expected.', line=i)
+
+def parse_matrix(lines):
+    if len(lines) <= 0:
+        fatal_parse_error(f'Zero length matrix.')
+
+    row0 = parse_row(lines[0])
+    n = len(row0)
+    if len(lines) != n:
+        fatal_parse_error(f'Expecting square matrix but the matrix given is {len(lines)} x {n}', line=0)
+
+    matrix = []
+
+    for i, line in lines:
+        row = parse_row((i, line))
+        if any(map(lambda x: x != 0 and x != 1)):
+            fatal_parse_error(f'Expecting binary matrix.', line=line)
+
+        matrix.append(row)
+
+    g = SimpleGraph(n)
+    for i in range(len(matrix)):
+        for j in range(len(matrix[0])):
+            if matrix[i][j] == 1:
+                g.connect(i, j)
+
+    return g
+
+
+        
+        
+    
+
 
 def parse_input(filepath, style='adj_list'):
     if style not in ['adj_list', 'matrix']:
-        raise ValueError(f'Unknown parse style: {style}')
+        fatal_parse_error(f'Unknown input style {style}')
 
     if style == 'matrix':
-        raise NotImplementedError(f'Matrix parsing is not implemented yet!')
+        return parse_matrix(read_lines_ds(filepath))
 
-    return parse_adj_list(read_lines_ds(filepath))
+    if style == 'adj_list':
+        return parse_adj_list(read_lines_ds(filepath))
+
+    
 
 
         
