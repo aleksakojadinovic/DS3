@@ -8,11 +8,13 @@ class SimpleGraph:
 
     @staticmethod
     def stack_pop(collection):
-        return collection.pop()
+        x = collection.pop()
+        return x, collection
 
     @staticmethod
     def queue_pop(collection):
-        return collection.pop(0)
+        x = collection.pop(0)
+        return x, collection
 
     EULER_HAS_PATH          = 0
     EULER_HAS_CYCLE         = 1
@@ -68,12 +70,13 @@ class SimpleGraph:
         adj_list = copy.deepcopy(self.adj_list)
         if ordered:
             adj_list = [[] for i in range(self.num_nodes)]
-            for key in self.adj_list.keys():
+            for key in sorted(list(self.adj_list.keys())):
                 adj_list[key] = sorted(list(self.adj_list[key]))
-
         while nodes:
-            
-            node = pop_func(nodes)
+
+            node, nodes = pop_func(nodes)
+            if visited[node]:
+                continue
             visited[node] = True
             callback(node, visited)
 

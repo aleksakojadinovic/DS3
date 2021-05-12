@@ -100,7 +100,6 @@ if __name__ == '__main__':
 
     parser.add_argument('-s',
                         '--style',
-                        required=True,
                         default='adj_list',
                         help='Input style, either `adj_list` or `matrix`.')
 
