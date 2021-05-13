@@ -84,7 +84,7 @@ def parse_matrix(lines):
 
     for i, line in lines:
         row = parse_row((i, line))
-        if any(map(lambda x: x != 0 and x != 1)):
+        if any(map(lambda x: x != 0 and x != 1, row)):
             fatal_parse_error(f'Expecting binary matrix.', line=line)
 
         matrix.append(row)

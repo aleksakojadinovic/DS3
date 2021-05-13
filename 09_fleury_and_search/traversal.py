@@ -1,6 +1,20 @@
 import argparse
+
+from numpy import recarray
 import graph_parser as gp
 from simple_graph import SimpleGraph
+import copy
+
+
+def dfs_recursive(graph, node, visited, into):        
+        if visited[node]:
+            return
+        visited[node] = True
+        into.append(node)
+
+        for x in sorted(list(graph.adj_list[node])):
+            if not visited[x]:
+                dfs_recursive(g, x, visited, into)
 
 
 if __name__ == '__main__':
@@ -22,6 +36,11 @@ if __name__ == '__main__':
                         default='dfs',
                         help='Which traversal to perform (dfs, bfs or both)')
 
+    parser.add_argument('-r',
+                        '--recursive',
+                        action='store_true',
+                        help='Whether to use recursive dfs')
+
     args = parser.parse_args()
 
     if args.traversal not in ['dfs', 'bfs', 'both']:
@@ -35,9 +54,12 @@ if __name__ == '__main__':
     dfs_list = []
     bfs_list = []
     if do_dfs:
-        g.dfs(start_node=0, 
-            callback=lambda x, _: dfs_list.append(x),
-            ordered=True)
+        if not args.recursive:
+            g.dfs(start_node=0, 
+                callback=lambda x, _: dfs_list.append(x),
+                ordered=True)
+        else:
+            dfs_recursive(g, 0, [False for _ in range(g.num_nodes)], dfs_list)
     if do_bfs:
         g.bfs(start_node=0, 
             callback=lambda x, _: bfs_list.append(x),

@@ -51,6 +51,10 @@ class SimpleGraph:
 
     
     def euler_check(self):
+        if not self.connected():
+            return SimpleGraph.EULER_HAS_NOTHING
+
+
         num_odd_degrees = sum(map(lambda x: 0 if self.degrees[x] % 2 == 0 else 1, range(self.num_nodes)))
         if num_odd_degrees == 0:
             return SimpleGraph.EULER_HAS_CYCLE
@@ -72,6 +76,8 @@ class SimpleGraph:
             adj_list = [[] for i in range(self.num_nodes)]
             for key in sorted(list(self.adj_list.keys())):
                 adj_list[key] = sorted(list(self.adj_list[key]))
+
+        # print(adj_list)
         while nodes:
 
             node, nodes = pop_func(nodes)
@@ -87,6 +93,10 @@ class SimpleGraph:
 
         return visited
 
+    def connected(self):
+        return all(self.dfs())
+
+
     def dfs(self, start_node=None, callback=None, ordered=False):
         if start_node is None:
             start_node = 0
@@ -100,6 +110,8 @@ class SimpleGraph:
         if callback is None:
             callback = SimpleGraph.dummy_callback
         return self.traversal_(start_node, callback, SimpleGraph.queue_pop, ordered)
+
+
 
 
     def fleury(self):
