@@ -1,0 +1,10 @@
+# First M and N
+3 4
+# Then the objective function
+-4 -3 -3 -2
+# Then the constraint matrix
+2 1 1 4 <= 5
+2 3 -2 5 <= 7
+1 4 5 -1 <= 7
+
+

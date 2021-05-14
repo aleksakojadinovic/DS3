@@ -72,7 +72,6 @@ def reconstruct_zero_one(dp_matrix, weights):
             j -= weights[i-1]
         i -= 1
 
-    # res.reverse()
     return res
 
 

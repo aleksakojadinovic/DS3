@@ -383,7 +383,7 @@ if __name__ == '__main__':
     print('Minimize f =', ' + '.join(f'{c}*x_{i}' for i, c in enumerate(lpc)))
     print('given:')
     print(systos(lpA, lpb))
-    themin = find_min(lpc, lpA, lpb)
+    themin = np.round(find_min(lpc, lpA, lpb), 8)
     print(f'min(f)={themin}' if themin is not None else 'Unsolvable.')
 
 
@@ -395,5 +395,5 @@ if __name__ == '__main__':
         [-1, 2, 3, -5]]
     fb = [1, 55, 3]
     fc = [-4, -1, -5, -3]
-    print(find_min(fc, fA, fb))
+    print(np.round(find_min(fc, fA, fb), 8))
 

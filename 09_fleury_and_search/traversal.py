@@ -4,6 +4,7 @@ from numpy import recarray
 import graph_parser as gp
 from simple_graph import SimpleGraph
 import copy
+import sys
 
 
 def dfs_recursive(graph, node, visited, into):        
@@ -41,12 +42,31 @@ if __name__ == '__main__':
                         action='store_true',
                         help='Whether to use recursive dfs')
 
+    parser.add_argument('-f',
+                        '--first',
+                        default=0,
+                        help='Whether to use recursive dfs')
+
     args = parser.parse_args()
 
     if args.traversal not in ['dfs', 'bfs', 'both']:
         print(f'Unknown traversal type: {args.traversal}')
 
+    
+
     g = gp.parse_input(args.input, style=args.style)    
+
+    first_node = None
+    try:
+        first_node = int(args.first)
+    except:
+        print(f'Invalid start node.')
+        sys.exit(1)
+
+    if first_node < 0 or first_node >= g.num_nodes:
+        print(f'Invalid start node.')
+        sys.exit(1)
+        
 
     do_dfs = 'dfs' == args.traversal or 'both' == args.traversal
     do_bfs = 'bfs' == args.traversal or 'both' == args.traversal
@@ -55,13 +75,13 @@ if __name__ == '__main__':
     bfs_list = []
     if do_dfs:
         if not args.recursive:
-            g.dfs(start_node=0, 
+            g.dfs(start_node=first_node, 
                 callback=lambda x, _: dfs_list.append(x),
                 ordered=True)
         else:
-            dfs_recursive(g, 0, [False for _ in range(g.num_nodes)], dfs_list)
+            dfs_recursive(g, first_node, [False for _ in range(g.num_nodes)], dfs_list)
     if do_bfs:
-        g.bfs(start_node=0, 
+        g.bfs(start_node=first_node, 
             callback=lambda x, _: bfs_list.append(x),
             ordered=True)
 
