@@ -30,7 +30,7 @@ u2 - u21, u22, ...
 where `V` is the number of nodes and each line is in format
 `node - list of neighbors`.
 __________________________________________
-### Input format (adj_list):
+### Input format (matrix):
 ```
 a00 a01 ... a0v-1
 a10 a11 ... a1v-1
