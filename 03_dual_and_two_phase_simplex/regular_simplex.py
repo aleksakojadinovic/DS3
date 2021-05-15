@@ -3,23 +3,53 @@ import numpy as np
 def pivot_basis(simplex_matrix, basic_indices, i0, j0):
     # We pivot around i0, j0, meaning we will get a new column that looks something like this 
     basic_indices = np.array(basic_indices)
-    new_column = np.zeros(simplex_matrix.shape[0])
+    new_column = np.zeros(simplex_matrix.shape[0] - 1)
     new_column[i0] = 1.0
 
     found = False
 
     for ii, basic_index in enumerate(basic_indices):
-        curr_basic_column = simplex_matrix[:, basic_index].copy()
-        if (curr_basic_column == new_column).all():
+        curr_basic_column = simplex_matrix[:-1, basic_index].copy()
+        curr_non_zero_idx = np.argwhere(curr_basic_column != 0)[0][0]
+        # print(f'col: {curr_basic_column}, coef: {curr_basic_coeff}')
+        if curr_non_zero_idx == i0:
             found = True
             basic_indices[ii] = j0
             break
 
+    if not found:
+        raise ValueError(f'Means my algorithm is wrong because I cannot find leaving basis')
+
     return list(basic_indices)
 
+def fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices):
+    # print(f'Fetching solution from matrix')
+    # print(np.around(simplex_matrix, 2))
+    # print(f'With basic indices being: {basic_indices}')
+    m, n = simplex_matrix.shape
+
+    solution = np.zeros(n-1)
+    for j in basic_indices:
+        row_idx = np.argwhere(simplex_matrix[:-1, j] != 0)[0][0]
+        coeff = simplex_matrix[row_idx, j]
+        solution[j] = simplex_matrix[row_idx, -1] / coeff
+
+    return solution
+
 def reg_simplex(simplex_matrix, basic_indices, phase=1):
+
+    def log(*args, **kwargs):
+        if phase == 2:
+            print(*args, **kwargs)
+
     simplex_matrix = np.array(simplex_matrix)
     basic_indices = np.array(basic_indices)
+
+    # log(f' >> Starting tableu simplex algorithm')
+    # log(f'\t Simplex matrix: ')
+    # log(simplex_matrix)
+    # log(f'\t indices of basic columns: {list(basic_indices)}')
+
     for i in range(len(simplex_matrix) - 1):
         if simplex_matrix[i][-1] < 0:
             simplex_matrix[i] *= -1
@@ -34,11 +64,22 @@ def reg_simplex(simplex_matrix, basic_indices, phase=1):
     
 
     while True:
+        # log('iteration: ')
+        # log(f'\t {iteration}')
+        # log('simplex matrix: ')
+        # log(simplex_matrix)
+        # log('basic: ')
+        # log(f'\t {basic_indices}')
+
         c = simplex_matrix[-1, :-1]
         b = simplex_matrix[:-1, -1]
         if (c >= 0).all():
-            if phase == 2:
-                print(f'PHASE 2 BASIC: {basic_indices}')
+            # simplex_result = dict()
+            # simplex_result['bounded'] = True
+            # simplex_result['message'] = 'Successfully found optimum value'
+            # simplex_result['opt']     = -simplex_matrix[-1, -1]
+            # simplex_result['opt_val'] = fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices)
+            # return simplex_result
             return True, simplex_matrix, basic_indices
 
         j0 = np.argwhere(c < 0)[0][0]
@@ -63,7 +104,7 @@ def reg_simplex(simplex_matrix, basic_indices, phase=1):
             return False, None, None
 
         ai0j0 = simplex_matrix[i0][j0]
-        
+        # log(f'\t\t now variable {j0} is supposed to enter the basis')
         basic_indices = pivot_basis(simplex_matrix, basic_indices, i0, j0)
 
         for i in range(sim_m):
