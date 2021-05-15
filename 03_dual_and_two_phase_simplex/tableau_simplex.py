@@ -36,11 +36,7 @@ def fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices):
 
     return solution
 
-def reg_simplex(simplex_matrix, basic_indices, phase=1):
-
-    def log(*args, **kwargs):
-        if phase == 2:
-            print(*args, **kwargs)
+def tableau_simplex(simplex_matrix, basic_indices, phase=None):
 
     simplex_matrix = np.array(simplex_matrix)
     basic_indices = np.array(basic_indices)
@@ -69,12 +65,13 @@ def reg_simplex(simplex_matrix, basic_indices, phase=1):
         b = simplex_matrix[:-1, -1]
         if (c >= 0).all():
             simplex_result = dict()
-            simplex_result['bounded'] = True
-            simplex_result['message'] = 'Successfully found optimum value'
-            simplex_result['opt_val']     = -simplex_matrix[-1, -1]
-            simplex_result['opt_point'] = fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices)
-            simplex_result['last_matrix'] = simplex_matrix
+            simplex_result['bounded']       = True
+            simplex_result['message']       = 'Successfully found optimum value'
+            simplex_result['opt_val']       = -simplex_matrix[-1, -1]
+            simplex_result['opt_point']     = fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices)
+            simplex_result['last_matrix']   = simplex_matrix
             simplex_result['basic_indices'] = basic_indices
+            simplex_result['phase']         = phase
             return simplex_result
 
         j0 = np.argwhere(c < 0)[0][0]
@@ -89,6 +86,7 @@ def reg_simplex(simplex_matrix, basic_indices, phase=1):
             simplex_result['opt_point'] = 0.0
             simplex_result['last_matrix'] = simplex_matrix
             simplex_result['basic_indices'] = basic_indices
+            simplex_result['phase'] = phase
             return simplex_result
 
         i0 = None
@@ -110,6 +108,7 @@ def reg_simplex(simplex_matrix, basic_indices, phase=1):
             simplex_result['opt_point'] = 0.0
             simplex_result['last_matrix'] = simplex_matrix
             simplex_result['basic_indices'] = basic_indices
+            simplex_result['phase'] = phase
             return simplex_result
 
         ai0j0 = simplex_matrix[i0][j0]
@@ -132,8 +131,7 @@ def reg_simplex(simplex_matrix, basic_indices, phase=1):
 
 
         iteration += 1
-        # if iteration == 3:
-        #     return simplex_matrix, False
+
 
             
 

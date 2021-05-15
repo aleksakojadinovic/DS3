@@ -1,6 +1,6 @@
 import numpy as np
-from regular_simplex import reg_simplex as r_simplex
-import lp_input_parser as lparse
+from tableau_simplex import tableau_simplex as t_simplex
+import lp_parse as lpp
 import sys
 from scipy.optimize import linprog
 import warnings
@@ -130,19 +130,20 @@ def two_phase_simplex_solver(c, eqA, eqb):
     x0length = sub_n - 1
     x0 = np.append(np.zeros(x0length - len(sub_b_vector)), sub_b_vector)
 
-    phase_one_simplex_result = r_simplex(subA, basic_indices)
+    phase_one_simplex_result = t_simplex(subA, basic_indices)
 
     if not phase_one_simplex_result['bounded']:
-        print(f'No solution in phase one: {phase_one_simplex_result["message"]}')
+        return phase_one_simplex_result
+
     last_matrix = phase_one_simplex_result['last_matrix']
     last_basic_indices = phase_one_simplex_result['basic_indices']
 
     phase_one_opt = phase_one_simplex_result['opt_val']
 
     if not np.isclose(phase_one_opt, 0.0):
-        print(f'Phase one opt is nonzero, no solution then.')
-        print(f'it is: {phase_one_opt}')
-        return None
+        phase_one_simplex_result['bounded'] = False
+        phase_one_simplex_result['message'] = 'Phase one optimum iz non-zero'
+        return phase_one_simplex_result
 
     cols_to_delete = []
     for artif_index in artificial_indices:
@@ -178,8 +179,6 @@ def two_phase_simplex_solver(c, eqA, eqb):
         new_target = np.append(c, np.zeros(diff))
         new_matrix[-1, :] = new_target
 
-
-    # print(f'Sending {find_basic_columns(new_matrix[:-1, :-1])}')
     bbi, _ = find_basic_columns(new_matrix[:-1, :-1])
     phase_two_matrix = piv_artif(new_matrix, bbi)
 
@@ -187,25 +186,17 @@ def two_phase_simplex_solver(c, eqA, eqb):
     phase_two_matrix[:-1, :-1] = phase_two_A
     phase_two_matrix[:-1, -1] = phase_two_b
 
-    phase_two_simplex_result = r_simplex(phase_two_matrix, phase_two_basic, phase=2)
-    if not phase_two_simplex_result['bounded']:
-        print(f'No solution in phase two: {phase_two_simplex_result["message"]}')
-        return None
-    
-    final_optimum = phase_two_simplex_result['opt_val']
-    final_optimum_point = phase_two_simplex_result['opt_point']
+    phase_two_simplex_result = t_simplex(phase_two_matrix, phase_two_basic, phase=2)
+    return phase_two_simplex_result
 
-    return final_optimum, final_optimum_point
-
-    
     
 
 def test_against_scipy(A, b, c):
     print(f'TARGET FUNCTION: {c}')
     warnings.filterwarnings("ignore")
     print(f'Me: ')
-    opt, opt_point = two_phase_simplex_solver(c, A, b)
-    print(f'Optimal value: {opt} reached with x={np.around(opt_point, 2)}')
+    mr = two_phase_simplex_solver(c, A, b)
+    print(f'Optimal value: {mr["opt_val"]} reached with x={np.around(mr["opt_point"], 8)}')
 
     print('===========')
     
@@ -250,8 +241,10 @@ def example3():
     test_against_scipy(A, b, c)
 
 if __name__ == '__main__':
-    example1()
-    example2()
-    example3()
+    input_file = sys.argv[-1]
+    lines = lpp.read_lines_ds(input_file)
+    eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(lines)
+
+    
 
 
