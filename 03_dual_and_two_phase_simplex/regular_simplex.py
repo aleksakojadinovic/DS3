@@ -64,30 +64,32 @@ def reg_simplex(simplex_matrix, basic_indices, phase=1):
     
 
     while True:
-        # log('iteration: ')
-        # log(f'\t {iteration}')
-        # log('simplex matrix: ')
-        # log(simplex_matrix)
-        # log('basic: ')
-        # log(f'\t {basic_indices}')
 
         c = simplex_matrix[-1, :-1]
         b = simplex_matrix[:-1, -1]
         if (c >= 0).all():
-            # simplex_result = dict()
-            # simplex_result['bounded'] = True
-            # simplex_result['message'] = 'Successfully found optimum value'
-            # simplex_result['opt']     = -simplex_matrix[-1, -1]
-            # simplex_result['opt_val'] = fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices)
-            # return simplex_result
-            return True, simplex_matrix, basic_indices
+            simplex_result = dict()
+            simplex_result['bounded'] = True
+            simplex_result['message'] = 'Successfully found optimum value'
+            simplex_result['opt_val']     = -simplex_matrix[-1, -1]
+            simplex_result['opt_point'] = fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices)
+            simplex_result['last_matrix'] = simplex_matrix
+            simplex_result['basic_indices'] = basic_indices
+            return simplex_result
 
         j0 = np.argwhere(c < 0)[0][0]
         
 
 
         if (simplex_matrix[:-1, j0] < 0).all():
-            return False, None, None
+            simplex_result = dict()
+            simplex_result['bounded'] = False
+            simplex_result['message'] = 'The function is unbounded (no positive val in pivot column)'
+            simplex_result['opt_val']     = 0.0
+            simplex_result['opt_point'] = 0.0
+            simplex_result['last_matrix'] = simplex_matrix
+            simplex_result['basic_indices'] = basic_indices
+            return simplex_result
 
         i0 = None
         piv_min = None
@@ -101,7 +103,14 @@ def reg_simplex(simplex_matrix, basic_indices, phase=1):
                 piv_min = piv_curr
 
         if i0 is None:
-            return False, None, None
+            simplex_result = dict()
+            simplex_result['bounded'] = False
+            simplex_result['message'] = 'The function is unbounded (no non positive val in pivot row)'
+            simplex_result['opt_val']     = 0.0
+            simplex_result['opt_point'] = 0.0
+            simplex_result['last_matrix'] = simplex_matrix
+            simplex_result['basic_indices'] = basic_indices
+            return simplex_result
 
         ai0j0 = simplex_matrix[i0][j0]
         # log(f'\t\t now variable {j0} is supposed to enter the basis')

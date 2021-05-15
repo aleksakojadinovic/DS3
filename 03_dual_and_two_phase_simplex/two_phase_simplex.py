@@ -7,54 +7,23 @@ import warnings
 
 FLOAT_T = 'float32'
 
-def print_constraints(A, b, signs, index_from_zero=True):
-    var_range = range(len(A[0])) if index_from_zero else range(1, len(A[0]) + 1)
-    var_names = [f'x_{i}' for i in var_range]
-    for row, b_val, sign in zip(A, b, signs):
-        lhs = ' + '.join(f'{r}*{varname}' for r, varname in zip(row, var_names))
-        rhs = str(b_val)
-        print('\t' + lhs + ' ' + sign + ' ' + rhs)
+def find_basic_columns(mat):
 
+    m, n = mat.shape
+    unit_column_indices     = []
+    unit_column_row_indices = []
+    for j in range(n-1):
+        col = mat[:-1, j]
+        if len(col[col == 0]) == m - 2:
+            at_row = np.argwhere(col != 0)[0][0]
+            if at_row in unit_column_row_indices:
+                continue
+            unit_column_indices.append(j)
+            unit_column_row_indices.append(at_row)
 
-# Assumes all dimensions are asserted
-# Checks which basic columns are missing
-# modifies matrix
-def prep_for_phase_one(eqA):
-    m, n = eqA.shape
+    # print(f'\t\t\t --- {unit_column_indices}')
+    return unit_column_indices, unit_column_row_indices
 
-    basic_column_indices = []
-    basic_missing = [i for i in range(m)]
-    for j in range(n):
-        column = eqA[:, j]
-        is_basic = len(column[column == 1]) == 1 and len(column[column == 0]) == len(column) - 1
-        if is_basic:
-            basic_column_indices.append(j)
-            basic_missing.remove(np.nonzero(column)[0])
-
-
-
-    
-    new_basic_columns = np.array([[1.0 if k == missing_index else 0.0 for k in range(m)] for missing_index in basic_missing])
-    for column in new_basic_columns:
-        eqA = np.hstack((eqA, column.reshape(-1, 1)))
-
-    artificial_indices = [i for i in range(n, eqA.shape[1])]
-    all_basis_indices = basic_column_indices + artificial_indices
-
-    return eqA, artificial_indices, all_basis_indices
-    
-
-
-# We add m artifical variables and we do not care if some other were basic
-# I have no idea whether this will work
-def simple_prep(eqA):
-    m, n = eqA.shape
-    subA = np.zeros((m, n + m))
-
-    subA[:m, :n] = eqA
-    subA[:, n:] = np.eye(m)
-
-    return subA, list(range(n, n + m))
 
 def adv_prep(eqA, eqb):
     eqA = np.array(eqA, dtype=FLOAT_T)
@@ -72,14 +41,9 @@ def adv_prep(eqA, eqb):
             unit_column_indices.append(j)
             unit_column_row_indices.append(at_row)
 
-
     if len(unit_column_indices) == m:
         return eqA, eqb, unit_column_indices, [], []
 
-    
-
-    
-    # Divide them all by their coefficients in order for them to be truly unit
     for row_idx, col_idx in zip(unit_column_row_indices, unit_column_indices):
         coeff = eqA[row_idx, col_idx]
         eqA[row_idx] /= coeff
@@ -126,34 +90,6 @@ def piv_artif(sub_simplex_matrix, artificial_indices):
 
     return sub_simplex_matrix
 
-def fix_indices(index_collection, removed_index):
-    for i in range(len(index_collection)):
-        if index_collection[i] >= removed_index:
-            index_collection[i] -= 1
-
-    return index_collection
-
-def find_basic_columns(mat):
-    
-    # print(f'Finding basic in: ')
-    # print(mat)
-
-    m, n = mat.shape
-    unit_column_indices     = []
-    unit_column_row_indices = []
-    for j in range(n-1):
-        col = mat[:-1, j]
-        if len(col[col == 0]) == m - 2:
-            at_row = np.argwhere(col != 0)[0][0]
-            if at_row in unit_column_row_indices:
-                continue
-            unit_column_indices.append(j)
-            unit_column_row_indices.append(at_row)
-
-    # print(f'\t\t\t --- {unit_column_indices}')
-    return unit_column_indices
-
-
 def remove_columns_and_fix_index_lists(matrix, cols_to_delete, index_lists):
     for j, col_to_delete in enumerate(cols_to_delete):
         for index_list in index_lists:
@@ -169,21 +105,6 @@ def remove_columns_and_fix_index_lists(matrix, cols_to_delete, index_lists):
 
     return matrix, index_lists
 
-def fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices):
-    # print(f'Fetching solution from matrix')
-    # print(np.around(simplex_matrix, 2))
-    # print(f'With basic indices being: {basic_indices}')
-    m, n = simplex_matrix.shape
-
-    solution = np.zeros(n-1)
-    for j in basic_indices:
-        row_idx = np.argwhere(simplex_matrix[:-1, j] != 0)[0][0]
-        coeff = simplex_matrix[row_idx, j]
-        solution[j] = simplex_matrix[row_idx, -1] / coeff
-
-
-
-    return solution
 
 # Assumes all constrains have been converted to equalities
 def two_phase_simplex_solver(c, eqA, eqb):
@@ -202,8 +123,6 @@ def two_phase_simplex_solver(c, eqA, eqb):
 
     eqA, eqb, basic_indices, artificial_indices, artificial_row_indices = adv_prep(eqA, eqb)
 
-    # TODO: If no artificial just use run simplex!
-
     subA = get_sub_simplex_matrix(eqA, eqb, artificial_indices, artificial_row_indices)
 
     sub_m, sub_n = subA.shape
@@ -211,13 +130,14 @@ def two_phase_simplex_solver(c, eqA, eqb):
     x0length = sub_n - 1
     x0 = np.append(np.zeros(x0length - len(sub_b_vector)), sub_b_vector)
 
-    indicator, last_matrix, last_basic_indices = r_simplex(subA, basic_indices)
+    phase_one_simplex_result = r_simplex(subA, basic_indices)
 
-    if not indicator:
-        print(f'Phase one no solution.')
-        return None
+    if not phase_one_simplex_result['bounded']:
+        print(f'No solution in phase one: {phase_one_simplex_result["message"]}')
+    last_matrix = phase_one_simplex_result['last_matrix']
+    last_basic_indices = phase_one_simplex_result['basic_indices']
 
-    phase_one_opt = last_matrix[-1, -1]
+    phase_one_opt = phase_one_simplex_result['opt_val']
 
     if not np.isclose(phase_one_opt, 0.0):
         print(f'Phase one opt is nonzero, no solution then.')
@@ -260,20 +180,24 @@ def two_phase_simplex_solver(c, eqA, eqb):
 
 
     # print(f'Sending {find_basic_columns(new_matrix[:-1, :-1])}')
-    phase_two_matrix = piv_artif(new_matrix, find_basic_columns(new_matrix[:-1, :-1]))
+    bbi, _ = find_basic_columns(new_matrix[:-1, :-1])
+    phase_two_matrix = piv_artif(new_matrix, bbi)
 
     phase_two_A, phase_two_b, phase_two_basic, _, _  = adv_prep(phase_two_matrix[:-1, :-1], phase_two_matrix[:-1, -1])
     phase_two_matrix[:-1, :-1] = phase_two_A
     phase_two_matrix[:-1, -1] = phase_two_b
-    ind, mat, basic = r_simplex(phase_two_matrix, phase_two_basic, phase=2)
 
-    if ind:
-        opt         = -np.round(mat[-1, -1], 8)
-        opt_point = fetch_sol_from_simplex_matrix(mat, basic)
-        return opt, np.around(opt_point, 8)
-    else:
-        print(f'Phase two simplex no solution.')
+    phase_two_simplex_result = r_simplex(phase_two_matrix, phase_two_basic, phase=2)
+    if not phase_two_simplex_result['bounded']:
+        print(f'No solution in phase two: {phase_two_simplex_result["message"]}')
         return None
+    
+    final_optimum = phase_two_simplex_result['opt_val']
+    final_optimum_point = phase_two_simplex_result['opt_point']
+
+    return final_optimum, final_optimum_point
+
+    
     
 
 def test_against_scipy(A, b, c):
