@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.linalg import basic
 from tableau_simplex import tableau_simplex as t_simplex
 import lp_parse as lpp
 import sys
@@ -38,6 +39,10 @@ def adv_prep(eqA, eqb):
             at_row = np.argwhere(col != 0)[0][0]
             if at_row in unit_column_row_indices:
                 continue
+
+            if np.sign(col[at_row]) != np.sign(eqb[at_row]):
+                continue
+            
             unit_column_indices.append(j)
             unit_column_row_indices.append(at_row)
 
@@ -54,13 +59,14 @@ def adv_prep(eqA, eqb):
     artificial_unit_column_indices  = []
     for missing_row_index in artificial_unit_row_indices:
         artificial_column = np.zeros(m)
-        artificial_column[missing_row_index] = 1.0
+        artificial_column[missing_row_index] = 1.0 * np.sign(eqb[missing_row_index])
         eqA = np.append(eqA, artificial_column.reshape(-1, 1), axis=1)
         artificial_unit_column_indices.append(eqA.shape[1] - 1)
 
-    num_artif = len(artificial_unit_row_indices)
 
     return eqA, eqb, unit_column_indices + artificial_unit_column_indices, artificial_unit_column_indices, artificial_unit_row_indices
+
+
 
 
 # Construct sub-problem matrix by adding artificial
@@ -75,11 +81,14 @@ def get_sub_simplex_matrix(subA, eqb, artificial_indices, artificial_row_indices
     sub_simplex_matrix[:m, :n] = subA
     sub_simplex_matrix[:-1, -1] = eqb
     sub_simplex_matrix[-1, n - num_artif:-1] = np.ones(num_artif)
+
+    # print('donig thingy to')
+    # print(sub_simplex_matrix)
     
 
 
     for ar in artificial_row_indices:
-        sub_simplex_matrix[-1, :] -= sub_simplex_matrix[ar, :]
+        sub_simplex_matrix[-1, :] -= np.sign(eqb[ar]) * sub_simplex_matrix[ar, :]
 
 
     return sub_simplex_matrix
@@ -120,17 +129,24 @@ def two_phase_simplex_solver(c, eqA, eqb):
     if m != len(eqb):
         raise ValueError(f'eqA has {m} constraints but b-vector has {len(eqb)} values')
 
+    
+    # print('sending to prep: ')
+    # print(eqA)
+    # print(eqb)
 
     eqA, eqb, basic_indices, artificial_indices, artificial_row_indices = adv_prep(eqA, eqb)
 
-    subA = get_sub_simplex_matrix(eqA, eqb, artificial_indices, artificial_row_indices)
+    # print('after prep we have:')
+    # print(eqA)
+    # print(eqb)
 
-    sub_m, sub_n = subA.shape
-    sub_b_vector = subA[:-1, -1]
-    x0length = sub_n - 1
-    x0 = np.append(np.zeros(x0length - len(sub_b_vector)), sub_b_vector)
+    sub_problem_simplex_matrix = get_sub_simplex_matrix(eqA, eqb, artificial_indices, artificial_row_indices)
 
-    phase_one_simplex_result = t_simplex(subA, basic_indices)
+    # print('sub problem matrix:')
+    # print(sub_problem_simplex_matrix)
+
+
+    phase_one_simplex_result = t_simplex(sub_problem_simplex_matrix, basic_indices, phase=1)
 
     if not phase_one_simplex_result['bounded']:
         return phase_one_simplex_result
@@ -180,11 +196,13 @@ def two_phase_simplex_solver(c, eqA, eqb):
         new_matrix[-1, :] = new_target
 
     bbi, _ = find_basic_columns(new_matrix[:-1, :-1])
-    phase_two_matrix = piv_artif(new_matrix, bbi)
 
-    phase_two_A, phase_two_b, phase_two_basic, _, _  = adv_prep(phase_two_matrix[:-1, :-1], phase_two_matrix[:-1, -1])
-    phase_two_matrix[:-1, :-1] = phase_two_A
-    phase_two_matrix[:-1, -1] = phase_two_b
+    phase_two_matrix = piv_artif(new_matrix, bbi)
+    phase_two_basic,_ = find_basic_columns(phase_two_matrix)
+
+
+    # phase_two_A, phase_two_b, phase_two_basic, _, _  = adv_prep(phase_two_matrix[:-1, :-1], phase_two_matrix[:-1, -1])
+
 
     phase_two_simplex_result = t_simplex(phase_two_matrix, phase_two_basic, phase=2)
     return phase_two_simplex_result
@@ -196,7 +214,11 @@ def test_against_scipy(A, b, c):
     warnings.filterwarnings("ignore")
     print(f'Me: ')
     mr = two_phase_simplex_solver(c, A, b)
-    print(f'Optimal value: {mr["opt_val"]} reached with x={np.around(mr["opt_point"], 8)}')
+    if mr['bounded']:
+        print(f'Optimal value: {mr["opt_val"]} reached with x={np.around(mr["opt_point"], 8)}')
+    else:
+        print(mr)
+
 
     print('===========')
     
@@ -241,10 +263,13 @@ def example3():
     test_against_scipy(A, b, c)
 
 if __name__ == '__main__':
-    input_file = sys.argv[-1]
-    lines = lpp.read_lines_ds(input_file)
-    eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(lines)
+    example1()
+    example2()
+    example3()
+    # input_file = sys.argv[-1]
+    # lines = lpp.read_lines_ds(input_file)
+    # eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(lines)
 
-    
+
 
 

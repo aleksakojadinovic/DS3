@@ -48,25 +48,7 @@ def parse_matrix_dimensions(line):
     except:
         fatal_parse_error(f'Failed to parse matrix dimensions from: {line}.')
 
-def parse_mn_matrix(m, n, lines):
-    if m <= 0 or n <= 0:
-        fatal_parse_error(f'Invalid dimensions: {m} x {n}.')
-    if len(lines) != m: 
-        fatal_parse_error(f'Expecting {m} lines, got {len(lines)}.')
-    matrix = np.zeros((m, n), dtype='float32')
-    for i, row_string in enumerate(lines):
-        row = parse_n_floats(n, row_string)
-        matrix[i] = row
-    return matrix
 
-"""Parses matrix of form:
-a00   a01    .... a0n-1     >=/<=/= b0
-a10   a11    .... a1n-1     >=/<=/= b1
-...
-am-10 am-11  .... am-1n-1   >=/<=/= bm
-
-and returns it in eqA, eqb, leqA, leqb form (the simplex format)
-"""
 def parse_any_lp_input(lines):
     m, n = parse_matrix_dimensions(lines[0])
     lines = lines[1:]
@@ -102,13 +84,33 @@ def parse_any_lp_input(lines):
             leqb.append(rhs)
     
 
-    return eqA, eqb, leqA, leqb
+    return np.array(eqA), np.array(eqb), np.array(leqA), np.array(leqb)
 
-        
-
+def convert_to_eq(leqA, leqb, eqA=None, eqb=None):
+    m, n = leqA.shape
+    # We need to add m slack variables
+    neweqA = np.zeros((m, n + m))
     
-    
 
+    neweqA[:m, :m] = leqA
+    neweqA[m:, n:] = np.eye(m)
+    neweqb = leqb
+
+    if eqA is None or eqb is None or len(eqA) == 0 or len(eqb) == 0:
+        return neweqA, neweqb
+
+    other_m, other_n = eqA.shape
+    if n > other_n:
+        # This means that we have to extend other constraints
+        diff = n - other_n
+        eqA = np.append(eqA, np.zeros((other_m, diff)))
+        eqb = np.append(eqb, np.zeros(diff))
+    elif other_n > n:
+        diff = other_n - n
+        leqA = np.append(leqA, np.zeros((m, diff)))
+        leqb = np.append(leqb, np.zeros(diff))
+
+    return np.vstack(leqA, eqA), np.vstack(leqb, eqb)
 
 def abc_to_simplex_matrix(A, b, c):
     A = np.array(A)
