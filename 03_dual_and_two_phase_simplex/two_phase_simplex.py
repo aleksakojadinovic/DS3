@@ -361,42 +361,42 @@ def example7():
     test_against_scipy(A, b, c)
 
 if __name__ == '__main__':
-    example1()
-    example2()
-    example3()
-    example4()
-    example5()
-    example6()
-    example7()
-    # parser = argparse.ArgumentParser()
-    # parser.add_argument('-i', 
-    #                     '--input',
-    #                      help='The input file.',
-    #                      required=True)
+    # example1()
+    # example2()
+    # example3()
+    # example4()
+    # example5()
+    # example6()
+    # example7()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', 
+                        '--input',
+                         help='The input file.',
+                         required=True)
 
-    # parser.add_argument('-m',
-    #                     '--maximize',
-    #                     action='store_true',
-    #                     help='Maximize the objective function (minimization is default).')
+    parser.add_argument('-m',
+                        '--maximize',
+                        action='store_true',
+                        help='Maximize the objective function (minimization is default).')
 
-    # args = parser.parse_args()
-    # input_lines = lpp.read_lines_ds(args.input)
+    args = parser.parse_args()
+    input_lines = lpp.read_lines_ds(args.input)
 
-    # c, eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(input_lines)
+    c, eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(input_lines)
 
-    # stdout_backup = sys.stdout
-    # sys.stdout = open('dummy_out.txt', 'w')
-    # res = solve_lp(c, eqA, eqb, leqA, leqb, args.maximize)
-    # sys.stdout = stdout_backup
+    stdout_backup = sys.stdout
+    sys.stdout = open('dummy_out.txt', 'w')
+    res = solve_lp(c, eqA, eqb, leqA, leqb, args.maximize)
+    sys.stdout = stdout_backup
 
-    # print(f'>> {res["message"]}')
-    # if not res['bounded']:
-    #     sys.exit(0)
+    print(f'>> {res["message"]}')
+    if not res['bounded']:
+        sys.exit(0)
     
-    # print(f'Optimal value: ')
-    # print(f'\t{res["opt_val"]}')
-    # print(f'Optimum reached for point: ')
-    # print(f'\t{tuple(res["opt_point"])}')
+    print(f'Optimal value: ')
+    print(f'\t{res["opt_val"]}')
+    print(f'Optimum reached for point: ')
+    print(f'\t{tuple(res["opt_point"])}')
     
 
 
