@@ -1,12 +1,15 @@
 import sys
-import numpy as np
-import pandas as pd
-from tableau_simplex import tableau_simplex as t_simplex
-import lp_parse as lpp
+sys.path.append('../_simplex_utils/')
+
 import argparse
+
+import numpy as np
 from scipy.optimize import linprog
 import warnings
 
+from tableau_simplex import tableau_simplex as t_simplex
+import lp_parse as lpp
+ 
 
 FLOAT_T = 'float64'
 

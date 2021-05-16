@@ -1,2 +1,0 @@
-This solution is integer, done.
-Optimal value: -4.0

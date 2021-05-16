@@ -1,7 +1,6 @@
 """Parses input for linear constraint problem"""
 import numpy as np
 import sys
-import argparse
 
 def fatal_parse_error(msg):
     print(f'Fatal parse error: {msg}')
@@ -143,7 +142,6 @@ def abc_to_simplex_matrix(A, b, c):
     return simplex_matrix
 
 def simplex_matrix_to_abc(simplex_matrix):
-    # NOTE: Not possible if malformed
     simplex_m, simplex_n = simplex_matrix.shape
     m = simplex_m - 1
     n = simplex_n - m - 1

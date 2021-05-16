@@ -1,6 +1,4 @@
 import numpy as np
-import pandas as pd
-from scipy.linalg import basic
 
 def pivot_basis(simplex_matrix, basic_indices, i0, j0):
     basic_indices = np.array(basic_indices)

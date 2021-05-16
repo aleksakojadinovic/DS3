@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../_simplex_utils/')
+sys.path.append('../03_dual_and_two_phase_simplex/')
 import argparse
 import numpy as np
 import pandas as pd
@@ -16,17 +19,14 @@ def smash(x):
     return np.floor(x), x - np.floor(x)
 
 def construct_cut(lhs, rhs):
-    # print(f'Constructing cut for constraint: {lhs} = {rhs}')
 
     lhs = list(map(smash, lhs))
     rhs = smash(rhs)
 
-    # print(f'Smashed: {lhs} = {rhs}')
 
     new_lhs = np.array(list(map(lambda x: x[1], lhs)))
     new_rhs = rhs[1]
 
-    # print(f'Cut: {new_lhs} = {new_rhs}')
 
     return -new_lhs, -new_rhs
 
