@@ -88,24 +88,27 @@ def parse_any_lp_input(lines):
             leqA.append(lhs)
             leqb.append(rhs)
     
-    print(f'parsed:')
-    print(c)
-    print(eqA)
-    print(eqb)
-    print(leqA)
-    print(leqb)
 
     return c, np.array(eqA), np.array(eqb), np.array(leqA), np.array(leqb)
 
-def convert_to_eq(leqA, leqb, eqA=None, eqb=None):
+def pad_right(c, n):
+    if len(c) > n:
+        raise ValueError(f'Cannot pad {c} to size {n}')
+
+    diff = n - len(c)
+    return np.append(c, np.zeros(diff))
+
+
+def convert_to_eq(leqA, leqb, eqA=None, eqb=None, c=None):
     if len(leqA) == 0 or len(leqb) == 0:
         return eqA, eqb
     m, n = leqA.shape
     # We need to add m slack variables
+
     neweqA = np.zeros((m, n + m))
 
-    neweqA[:m, :m] = leqA
-    neweqA[m:, n:] = np.eye(m)
+    neweqA[:m, :n] = leqA
+    neweqA[:, n:] = np.eye(m)
     neweqb = leqb
 
     if eqA is None or eqb is None or len(eqA) == 0 or len(eqb) == 0:

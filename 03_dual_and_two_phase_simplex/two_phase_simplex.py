@@ -1,3 +1,4 @@
+import sys
 import numpy as np
 import pandas as pd
 from tableau_simplex import tableau_simplex as t_simplex
@@ -250,7 +251,25 @@ def two_phase_simplex_solver(c, eqA, eqb):
 
     return phase_two_simplex_result
 
-    
+
+def solve_lp(c, eqA, eqb, leqA, leqb, maxx=False):
+    orig_n = len(c)
+
+    eqA, eqb = lpp.convert_to_eq(leqA, leqb, eqA, eqb)
+    c = lpp.pad_right(c, eqA.shape[1])
+
+    if maxx:
+        c *= -1
+
+    res = two_phase_simplex_solver(c, eqA, eqb)
+
+    if maxx:
+        res['opt_val'] *= -1
+
+    res["opt_point"] = res["opt_point"][:orig_n]
+
+    return res
+
 
 def test_against_scipy(A, b, c):
 
@@ -337,49 +356,37 @@ def example7():
     test_against_scipy(A, b, c)
 
 if __name__ == '__main__':
-    example1()
-    # example2()
-    # example3()
-    # example4()
-    # example5()
-    # example6()
-    # example7()
-    # input_file = sys.argv[-1]
-    # lines = lpp.read_lines_ds(input_file)
-    # eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(lines)
 
-# if __name__ == '__main__':
-#     example1()
-#     parser = argparse.ArgumentParser()
-#     parser.add_argument('-i', 
-#                         '--input',
-#                          help='The input file.',
-#                          required=True)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i', 
+                        '--input',
+                         help='The input file.',
+                         required=True)
 
-#     parser.add_argument('-m',
-#                         '--maximize',
-#                         action='store_true',
-#                         help='Maximize the objective function (minimization is default).')
+    parser.add_argument('-m',
+                        '--maximize',
+                        action='store_true',
+                        help='Maximize the objective function (minimization is default).')
 
-#     args = parser.parse_args()
-#     input_lines = lpp.read_lines_ds(args.input)
-#     c, eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(input_lines)
-#     eqA, eqb = lpp.convert_to_eq(leqA, leqb, eqA, eqb)
+    args = parser.parse_args()
+    input_lines = lpp.read_lines_ds(args.input)
 
-#     if args.maximize:
-#         c *= -1
+    c, eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(input_lines)
 
-#     print('------')
-#     print('running with')
-#     print(c)
-#     print(eqA)
-#     print(eqb)
+    stdout_backup = sys.stdout
+    sys.stdout = open('dummy_out.txt', 'w')
+    res = solve_lp(c, eqA, eqb, leqA, leqb, args.maximize)
+    sys.stdout = stdout_backup
 
-#     res = two_phase_simplex_solver(c, eqA, eqb)
-#     if args.maximize:
-#         res['opt_val'] *= -1
-
-#     print(res)
+    print(f'>> {res["message"]}')
+    if not res['bounded']:
+        sys.exit(0)
+    
+    print(f'Optimal value: ')
+    print(f'\t{res["opt_val"]}')
+    print(f'Optimum reached for point: ')
+    print(f'\t{tuple(res["opt_point"])}')
+    
 
 
 
