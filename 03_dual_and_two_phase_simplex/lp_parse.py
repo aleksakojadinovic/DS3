@@ -23,7 +23,7 @@ def parse_n_of(n, line, type_func, type_name):
         fatal_parse_error(f'Expecting at least one value, got {n}')
     str_vals = line.split(" ")
     if len(str_vals) != n:
-        fatal_parse_error(f'Expecting {n} {type_name}s, but {len(str_vals)} found.')
+        fatal_parse_error(f'Expecting {n} {type_name}s, but {len(str_vals)} found., at {line}')
     
     try:
         res = np.array(list(map(type_func, str_vals)))
@@ -50,27 +50,32 @@ def parse_matrix_dimensions(line):
 
 
 def parse_any_lp_input(lines):
+    
     m, n = parse_matrix_dimensions(lines[0])
-    lines = lines[1:]
-    if len(lines) != m:
+
+    c = parse_n_floats(n, lines[1])
+
+    if len(lines[2:]) != m:
         fatal_parse_error(f'Expecting m rows, got {len(lines)}')
+
+    
 
     eqA = []
     eqb = []
     leqA = []
     leqb = []
-    for line in lines[1:]:
-        line = line.split(" ")
+    for line in lines[2:]:
+        line_sp = line.split(" ")
         # Expecting n + 2 values: n variables, 1 sign and 1 b value
-        if len(line) != n + 2:
+        if len(line_sp) != n + 2:
             fatal_parse_error(f'Expecting {n+2} values in line {line} but got {len(line)}')
 
-        sign = line[-2]
+        sign = line_sp[-2]
         if sign not in ['=', '>=', '<=']:
             fatal_parse_error(f'Expecting sign to be >=, <= or =, but got {sign}')
 
-        lhs = parse_n_floats(n, line[:n])
-        rhs = parse_n_floats(1, [line[-1]])[0]
+        lhs = parse_n_floats(n, " ".join(line_sp[:n]))
+        rhs = parse_n_floats(1, line_sp[-1])[0]
 
         if sign == '=':
             eqA.append(lhs)
@@ -83,14 +88,21 @@ def parse_any_lp_input(lines):
             leqA.append(lhs)
             leqb.append(rhs)
     
+    print(f'parsed:')
+    print(c)
+    print(eqA)
+    print(eqb)
+    print(leqA)
+    print(leqb)
 
-    return np.array(eqA), np.array(eqb), np.array(leqA), np.array(leqb)
+    return c, np.array(eqA), np.array(eqb), np.array(leqA), np.array(leqb)
 
 def convert_to_eq(leqA, leqb, eqA=None, eqb=None):
+    if len(leqA) == 0 or len(leqb) == 0:
+        return eqA, eqb
     m, n = leqA.shape
     # We need to add m slack variables
     neweqA = np.zeros((m, n + m))
-    
 
     neweqA[:m, :m] = leqA
     neweqA[m:, n:] = np.eye(m)
@@ -98,6 +110,8 @@ def convert_to_eq(leqA, leqb, eqA=None, eqb=None):
 
     if eqA is None or eqb is None or len(eqA) == 0 or len(eqb) == 0:
         return neweqA, neweqb
+
+    
 
     other_m, other_n = eqA.shape
     if n > other_n:

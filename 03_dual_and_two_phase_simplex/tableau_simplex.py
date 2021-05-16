@@ -83,7 +83,7 @@ def tableau_simplex(simplex_matrix, basic_indices, phase=None):
             simplex_result['bounded'] = False
             simplex_result['message'] = 'The function is unbounded (no positive val in pivot column)'
             simplex_result['opt_val']     = 0.0
-            simplex_result['opt_point'] = 0.0
+            simplex_result['opt_point']   = np.zeros(sim_n - 1)
             simplex_result['last_matrix'] = simplex_matrix
             simplex_result['basic_indices'] = basic_indices
             simplex_result['phase'] = phase
@@ -105,14 +105,13 @@ def tableau_simplex(simplex_matrix, basic_indices, phase=None):
             simplex_result['bounded'] = False
             simplex_result['message'] = 'The function is unbounded (no non positive val in pivot row)'
             simplex_result['opt_val']     = 0.0
-            simplex_result['opt_point'] = 0.0
+            simplex_result['opt_point'] = np.zeros(sim_n - 1)
             simplex_result['last_matrix'] = simplex_matrix
             simplex_result['basic_indices'] = basic_indices
             simplex_result['phase'] = phase
             return simplex_result
 
         ai0j0 = simplex_matrix[i0][j0]
-        # log(f'\t\t now variable {j0} is supposed to enter the basis')
         basic_indices = pivot_basis(simplex_matrix, basic_indices, i0, j0)
 
         for i in range(sim_m):
