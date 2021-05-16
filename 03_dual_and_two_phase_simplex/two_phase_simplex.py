@@ -9,18 +9,18 @@ import warnings
 
 FLOAT_T = 'float32'
 
-def find_basic_columns(mat):
+def find_basic_columns(eqA, eqb):
 
-    m, n = mat.shape
+    m, n = eqA.shape
     unit_column_indices     = []
     unit_column_row_indices = []
-    for j in range(n-1):
-        col = mat[:-1, j]
-        if len(col[col == 0]) == m - 2:
-            at_row = np.argwhere(col != 0)[0][0]
+    for j in range(n):
+        col = eqA[:, j]
+        if len(col[np.isclose(col, 0)]) == m - 1:
+            at_row = np.argwhere(np.invert(np.isclose(col, 0)))[0][0]
             if at_row in unit_column_row_indices:
                 continue
-            if np.sign(col[at_row]) != np.sign(mat[at_row, -1]):
+            if np.sign(col[at_row]) != np.sign(eqb[at_row]):
                 continue
             unit_column_indices.append(j)
             unit_column_row_indices.append(at_row)
@@ -34,20 +34,8 @@ def adv_prep(eqA, eqb):
     eqb = np.array(eqb, dtype=FLOAT_T)
     
     m, n = eqA.shape
-    unit_column_indices     = []
-    unit_column_row_indices = []
-    for j in range(n):
-        col = eqA[:, j]
-        if len(col[col == 0]) == m - 1:
-            at_row = np.argwhere(col != 0)[0][0]
-            if at_row in unit_column_row_indices:
-                continue
 
-            if np.sign(col[at_row]) != np.sign(eqb[at_row]):
-                continue
-            
-            unit_column_indices.append(j)
-            unit_column_row_indices.append(at_row)
+    unit_column_indices, unit_column_row_indices = find_basic_columns(eqA, eqb)
 
     if len(unit_column_indices) == m:
         return eqA, eqb, unit_column_indices, [], []
@@ -215,7 +203,7 @@ def two_phase_simplex_solver(c, eqA, eqb):
         row_idx = np.argwhere(new_matrix[:, art_and_basic] == 1)[0][0]
         row = new_matrix[row_idx]
         
-        if (len(row[row == 0]) == len(row) - 1):
+        if (len(row[np.invert(np.isclose(row, 0.0))]) == len(row) - 1):
             artificial_indices.remove(art_and_basic)
             last_basic_indices.remove(art_and_basic)
             cols_to_delete.append(art_and_basic)
@@ -238,7 +226,7 @@ def two_phase_simplex_solver(c, eqA, eqb):
         new_matrix[-1, :] = new_target
 
     # print(pd.DataFrame(new_matrix))
-    bbi, bbir = find_basic_columns(new_matrix)
+    bbi, bbir = find_basic_columns(new_matrix[:-1, :-1], new_matrix[:-1, -1])
     # print(f'This matrix has basic columns: {bbi} and their rows {bbir}')
 
     # print(f'We perform the pivoting thingy on it')
@@ -264,21 +252,24 @@ def test_against_scipy(A, b, c):
 
     warnings.filterwarnings("ignore")
     print(f'Me: ')
-    mr = two_phase_simplex_solver(c, A, b)
-    if mr['bounded']:
-        print(f'Optimal value: {mr["opt_val"]} reached with x={np.around(mr["opt_point"], 5)}')
-    else:
-        print(mr)
-
+    try:
+        mr = two_phase_simplex_solver(c, A, b)
+        if mr['bounded']:
+            print(f'Optimal value: {mr["opt_val"]} reached with x={np.around(mr["opt_point"], 5)}')
+            print(f'Just to check, dotting opt point and target: ')
+            print(f'\t\t {np.dot(mr["opt_point"], c)}')
+        else:
+            print(mr)
+    except:
+        print('ne radi :D')
 
     print('===========')
     
     print(f'Scipy: ')
     sp = linprog(c, A_eq=A, b_eq=b, method='simplex')
     print(f'Optimal value: {sp["fun"]} reached with x={sp["x"]}')
-
+    
     print(f'BTW TARGET FUNCTION: {c}')
-
     print(f'==============================================================================')
     
 def example1():
@@ -339,6 +330,14 @@ def example6():
     b = [7, -1]
     test_against_scipy(A, b, c)
 
+def example7():
+    c = [-2, -3, -4, 0, 0, 0]
+    A = [[3, 2, 1, 1, 0, 0],
+         [2, 3, 3, 0, 1, 0],
+         [1, 1, -1, 0, 0, 1]]
+    b = [10, 15, 4]
+    test_against_scipy(A, b, c)
+
 if __name__ == '__main__':
     example1()
     example2()
@@ -346,6 +345,7 @@ if __name__ == '__main__':
     example4()
     example5()
     example6()
+    example7()
     # input_file = sys.argv[-1]
     # lines = lpp.read_lines_ds(input_file)
     # eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(lines)
