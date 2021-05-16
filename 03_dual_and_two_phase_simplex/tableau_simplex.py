@@ -3,8 +3,6 @@ import numpy as np
 def pivot_basis(simplex_matrix, basic_indices, i0, j0):
     # We pivot around i0, j0, meaning we will get a new column that looks something like this 
     basic_indices = np.array(basic_indices)
-    new_column = np.zeros(simplex_matrix.shape[0] - 1)
-    new_column[i0] = 1.0
 
     found = False
 
@@ -71,7 +69,7 @@ def tableau_simplex(simplex_matrix, basic_indices, phase=None):
             simplex_result['opt_point']     = fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices)
             simplex_result['last_matrix']   = simplex_matrix
             simplex_result['basic_indices'] = basic_indices
-            simplex_result['phase']         = phase
+            simplex_result['phase']     = phase
             return simplex_result
 
         j0 = np.argwhere(c < 0)[0][0]

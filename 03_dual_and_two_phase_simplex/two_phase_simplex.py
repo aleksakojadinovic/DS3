@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from scipy.linalg import basic
 from tableau_simplex import tableau_simplex as t_simplex
 import lp_parse as lpp
@@ -18,6 +19,8 @@ def find_basic_columns(mat):
         if len(col[col == 0]) == m - 2:
             at_row = np.argwhere(col != 0)[0][0]
             if at_row in unit_column_row_indices:
+                continue
+            if np.sign(col[at_row]) != np.sign(mat[at_row, -1]):
                 continue
             unit_column_indices.append(j)
             unit_column_row_indices.append(at_row)
@@ -67,37 +70,34 @@ def adv_prep(eqA, eqb):
     return eqA, eqb, unit_column_indices + artificial_unit_column_indices, artificial_unit_column_indices, artificial_unit_row_indices
 
 
-
-
-# Construct sub-problem matrix by adding artificial
-# objective funcion and do the pivoting thingy
-def get_sub_simplex_matrix(subA, eqb, artificial_indices, artificial_row_indices):
-
-    m, n = subA.shape
-    num_artif = len(artificial_indices)
-    # m + 1 for the new objective function
-    # n + 1 for the b
+def construct_sub_simplex_matrix(eqA, eqb, artificial_row_indices):
+    m, n = eqA.shape
+    num_artif = len(artificial_row_indices)
     sub_simplex_matrix = np.zeros((m + 1, n + 1))
-    sub_simplex_matrix[:m, :n] = subA
+    sub_simplex_matrix[:m, :n] = eqA
     sub_simplex_matrix[:-1, -1] = eqb
-    sub_simplex_matrix[-1, n - num_artif:-1] = np.ones(num_artif)
+    sub_simplex_matrix[-1, n - num_artif:-1] = np.ones(num_artif)  
 
-    # print('donig thingy to')
-    # print(sub_simplex_matrix)
+    return sub_simplex_matrix
+
+def pivot_ones(simplex_matrix, row_indices):
+    for row_idx in row_indices:
+        simplex_matrix[-1, :] -= np.sign(simplex_matrix[row_idx, -1]) * simplex_matrix[row_idx, :]
+
+    return simplex_matrix
+
+def pivot_coeffs(simplex_matrix, column_indices, row_indices):
+    last_row = simplex_matrix[-1, :]
+    for col_idx, row_idx in zip(column_indices, row_indices):
+        other_row = simplex_matrix[row_idx, :]
+        other_row_coeff = other_row[col_idx]
+        last_row_coeff = last_row[col_idx]
+        mul_coeff = -last_row_coeff / other_row_coeff
+        last_row += mul_coeff * other_row
     
-
-
-    for ar in artificial_row_indices:
-        sub_simplex_matrix[-1, :] -= np.sign(eqb[ar]) * sub_simplex_matrix[ar, :]
-
-
-    return sub_simplex_matrix
-
-def piv_artif(sub_simplex_matrix, artificial_indices):
-    for i, artifical_idx in enumerate(artificial_indices):
-        sub_simplex_matrix[-1, :] -= sub_simplex_matrix[i, :]
-
-    return sub_simplex_matrix
+    simplex_matrix[-1, :] = last_row
+    return simplex_matrix
+        
 
 def remove_columns_and_fix_index_lists(matrix, cols_to_delete, index_lists):
     for j, col_to_delete in enumerate(cols_to_delete):
@@ -114,6 +114,13 @@ def remove_columns_and_fix_index_lists(matrix, cols_to_delete, index_lists):
 
     return matrix, index_lists
 
+def convert_b_to_pos(eqA, eqb):
+    for i in range(eqA.shape[0]):
+        if eqb[i] < 0:
+            eqA[i, :] *= -1
+            eqb[i] *= -1
+
+    return eqA, eqb
 
 # Assumes all constrains have been converted to equalities
 def two_phase_simplex_solver(c, eqA, eqb):
@@ -129,27 +136,52 @@ def two_phase_simplex_solver(c, eqA, eqb):
     if m != len(eqb):
         raise ValueError(f'eqA has {m} constraints but b-vector has {len(eqb)} values')
 
-    
-    # print('sending to prep: ')
+
+    # print(f'Starting two phase simplex solver with')
+    # print(f'A = ')
     # print(eqA)
+    # print(f'b = ')
     # print(eqb)
 
+    eqA, eqb = convert_b_to_pos(eqA, eqb)
+    # print(f'Converting all bs to positive, resulting in: ')
+    # print(f'A = ')
+    # print(eqA)
+    # print(f'b = ')
+    # print(eqb)
+
+
+    # print(f'Starting preparation')
     eqA, eqb, basic_indices, artificial_indices, artificial_row_indices = adv_prep(eqA, eqb)
 
-    # print('after prep we have:')
+    # print(f'After preparation we have:')
+    # print(f'A = ')
     # print(eqA)
+    # print(f'b = ')
     # print(eqb)
+    # print(f'Basic indices: {basic_indices}')
+    # print(f'Artificial indices: {artificial_indices}')
+    # print(f'Artificial row indices: {artificial_row_indices}')
 
-    sub_problem_simplex_matrix = get_sub_simplex_matrix(eqA, eqb, artificial_indices, artificial_row_indices)
+    sub_problem_simplex_matrix = construct_sub_simplex_matrix(eqA, eqb, artificial_row_indices)
 
-    # print('sub problem matrix:')
+    # print(f'We will now append the sub-problem objective function:')
+    print(sub_problem_simplex_matrix)
+
+    sub_problem_simplex_matrix = pivot_ones(sub_problem_simplex_matrix, artificial_row_indices)
+
+    # print(f'Now we do the pivot thingy and get:')
     # print(sub_problem_simplex_matrix)
 
+    # print(f'Now we send that to phase one simplex, along with basic indices being: ')
+    # print(basic_indices)
 
     phase_one_simplex_result = t_simplex(sub_problem_simplex_matrix, basic_indices, phase=1)
 
     if not phase_one_simplex_result['bounded']:
         return phase_one_simplex_result
+
+    
 
     last_matrix = phase_one_simplex_result['last_matrix']
     last_basic_indices = phase_one_simplex_result['basic_indices']
@@ -160,6 +192,11 @@ def two_phase_simplex_solver(c, eqA, eqb):
         phase_one_simplex_result['bounded'] = False
         phase_one_simplex_result['message'] = 'Phase one optimum iz non-zero'
         return phase_one_simplex_result
+
+
+    # print(f'Phase one simplex is good, and it gives us this tableau: ')
+    # print(pd.DataFrame(last_matrix))
+    # print(f'With last basic indices being: {last_basic_indices}')
 
     cols_to_delete = []
     for artif_index in artificial_indices:
@@ -186,7 +223,12 @@ def two_phase_simplex_solver(c, eqA, eqb):
 
  
     new_matrix, [artificial_indices, last_basic_indices] = remove_columns_and_fix_index_lists(new_matrix, cols_to_delete, [artificial_indices, last_basic_indices])
-        
+    
+    # print(f'After removing all kinds of stuff from it we have the following matrix: ')
+    print(pd.DataFrame(new_matrix))
+
+    
+    # print(f'Now we just append our old target function')
     new_matrix_n = new_matrix.shape[1]
     if new_matrix_n == len(c):
         new_matrix[-1, :] = np.vstack((new_matrix, c))
@@ -195,27 +237,36 @@ def two_phase_simplex_solver(c, eqA, eqb):
         new_target = np.append(c, np.zeros(diff))
         new_matrix[-1, :] = new_target
 
-    bbi, _ = find_basic_columns(new_matrix[:-1, :-1])
+    # print(pd.DataFrame(new_matrix))
+    bbi, bbir = find_basic_columns(new_matrix)
+    # print(f'This matrix has basic columns: {bbi} and their rows {bbir}')
 
-    phase_two_matrix = piv_artif(new_matrix, bbi)
-    phase_two_basic,_ = find_basic_columns(phase_two_matrix)
+    # print(f'We perform the pivoting thingy on it')
+    phase_two_matrix = pivot_coeffs(new_matrix, bbi, bbir)
+    # print(pd.DataFrame(phase_two_matrix))
+
+    # print(f'And off to simplex it goes!')
+    
+    phase_two_simplex_result = t_simplex(phase_two_matrix, bbi, phase=2)
+
+    # print(f'Simplex last tableau: ')
+    # print(pd.DataFrame(phase_two_simplex_result['last_matrix']))
+    # print(f'Basics being: {phase_two_simplex_result["basic_indices"]}')
+    # print(f'And solution: ')
+    # print(phase_two_simplex_result['opt_point'])
 
 
-    # phase_two_A, phase_two_b, phase_two_basic, _, _  = adv_prep(phase_two_matrix[:-1, :-1], phase_two_matrix[:-1, -1])
-
-
-    phase_two_simplex_result = t_simplex(phase_two_matrix, phase_two_basic, phase=2)
     return phase_two_simplex_result
 
     
 
 def test_against_scipy(A, b, c):
-    print(f'TARGET FUNCTION: {c}')
+
     warnings.filterwarnings("ignore")
     print(f'Me: ')
     mr = two_phase_simplex_solver(c, A, b)
     if mr['bounded']:
-        print(f'Optimal value: {mr["opt_val"]} reached with x={np.around(mr["opt_point"], 8)}')
+        print(f'Optimal value: {mr["opt_val"]} reached with x={np.around(mr["opt_point"], 5)}')
     else:
         print(mr)
 
@@ -225,6 +276,8 @@ def test_against_scipy(A, b, c):
     print(f'Scipy: ')
     sp = linprog(c, A_eq=A, b_eq=b, method='simplex')
     print(f'Optimal value: {sp["fun"]} reached with x={sp["x"]}')
+
+    print(f'BTW TARGET FUNCTION: {c}')
 
     print(f'==============================================================================')
     
@@ -259,13 +312,32 @@ def example3():
          [1, 0, 0, 0, 0, 0, 1]]
 
     b = [10, -2, 6, 1]
+    # two_phase_simplex_solver(c, A, b)
+    test_against_scipy(A, b, c)
+
+def example4():
+    c = [6, 3, 0, 0, 0]
+    A = [[1, 1, -1, 0, 0],
+         [2, -1, 0, -1, 0],
+         [0, 3, 0, 0, 1]]
+    b = [1, 1, 2]
 
     test_against_scipy(A, b, c)
 
+def example5():
+    c = [2, 3, 1, 0, 0, 0]
+    A = [[1, 1, 1, 1, 0, 0],
+         [-2, -1, 1, 0, 1, 0],
+         [0, 1, -1, 0, 0, 1]]
+    b = [40, -10, -10]
+    test_against_scipy(A, b, c)
+
 if __name__ == '__main__':
-    example1()
-    example2()
-    example3()
+    # example1()
+    # example2()
+    # example3()
+    # example4()
+    example5()
     # input_file = sys.argv[-1]
     # lines = lpp.read_lines_ds(input_file)
     # eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(lines)
