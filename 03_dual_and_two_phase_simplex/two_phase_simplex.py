@@ -8,7 +8,7 @@ from scipy.optimize import linprog
 import warnings
 
 
-FLOAT_T = 'float32'
+FLOAT_T = 'float64'
 
 def sign_zero(a):
     if a < 0:
@@ -132,44 +132,44 @@ def two_phase_simplex_solver(c, eqA, eqb):
         raise ValueError(f'eqA has {m} constraints but b-vector has {len(eqb)} values')
 
 
-    print(f'Starting two phase simplex solver with')
-    print(f'A = ')
-    print(eqA)
-    print(f'b = ')
-    print(eqb)
+    # print(f'Starting two phase simplex solver with')
+    # print(f'A = ')
+    # print(eqA)
+    # print(f'b = ')
+    # print(eqb)
 
     eqA, eqb = convert_b_to_pos(eqA, eqb)
-    print(f'Converting all bs to positive, resulting in: ')
-    print(f'A = ')
-    print(eqA)
-    print(f'b = ')
-    print(eqb)
+    # print(f'Converting all bs to positive, resulting in: ')
+    # print(f'A = ')
+    # print(eqA)
+    # print(f'b = ')
+    # print(eqb)
 
 
-    print(f'Starting preparation')
+    # print(f'Starting preparation')
     eqA, eqb, basic_indices, artificial_indices, artificial_row_indices = adv_prep(eqA, eqb)
 
-    print(f'After preparation we have:')
-    print(f'A = ')
-    print(eqA)
-    print(f'b = ')
-    print(eqb)
-    print(f'Basic indices: {basic_indices}')
-    print(f'Artificial indices: {artificial_indices}')
-    print(f'Artificial row indices: {artificial_row_indices}')
+    # print(f'After preparation we have:')
+    # print(f'A = ')
+    # print(eqA)
+    # print(f'b = ')
+    # print(eqb)
+    # print(f'Basic indices: {basic_indices}')
+    # print(f'Artificial indices: {artificial_indices}')
+    # print(f'Artificial row indices: {artificial_row_indices}')
 
     sub_problem_simplex_matrix = construct_sub_simplex_matrix(eqA, eqb, artificial_row_indices)
 
-    print(f'We will now append the sub-problem objective function:')
-    print(sub_problem_simplex_matrix)
+    # print(f'We will now append the sub-problem objective function:')
+    # print(sub_problem_simplex_matrix)
 
     sub_problem_simplex_matrix = pivot_ones(sub_problem_simplex_matrix, artificial_row_indices)
 
-    print(f'Now we do the pivot thingy and get:')
-    print(sub_problem_simplex_matrix)
+    # print(f'Now we do the pivot thingy and get:')
+    # print(sub_problem_simplex_matrix)
 
-    print(f'Now we send that to phase one simplex, along with basic indices being: ')
-    print(basic_indices)
+    # print(f'Now we send that to phase one simplex, along with basic indices being: ')
+    # print(basic_indices)
 
     phase_one_simplex_result = t_simplex(sub_problem_simplex_matrix, basic_indices, phase=1)
 
@@ -189,9 +189,9 @@ def two_phase_simplex_solver(c, eqA, eqb):
         return phase_one_simplex_result
 
 
-    print(f'Phase one simplex is good, and it gives us this tableau: ')
-    print(pd.DataFrame(last_matrix))
-    print(f'With last basic indices being: {last_basic_indices}')
+    # print(f'Phase one simplex is good, and it gives us this tableau: ')
+    # print(pd.DataFrame(last_matrix))
+    # print(f'With last basic indices being: {last_basic_indices}')
 
     cols_to_delete = []
     for artif_index in artificial_indices:
@@ -216,11 +216,11 @@ def two_phase_simplex_solver(c, eqA, eqb):
  
     new_matrix, [artificial_indices] = remove_columns_and_fix_index_lists(new_matrix, cols_to_delete, [artificial_indices])
     
-    print(f'After removing all kinds of stuff from it we have the following matrix: ')
-    print(pd.DataFrame(new_matrix))
+    # print(f'After removing all kinds of stuff from it we have the following matrix: ')
+    # print(pd.DataFrame(new_matrix))
 
     
-    print(f'Now we just append our old target function')
+    # print(f'Now we just append our old target function')
     new_matrix_n = new_matrix.shape[1]
     if new_matrix_n == len(c):
         new_matrix[-1, :] = np.vstack((new_matrix, c))
@@ -229,30 +229,35 @@ def two_phase_simplex_solver(c, eqA, eqb):
         new_target = np.append(c, np.zeros(diff))
         new_matrix[-1, :] = new_target
 
-    print(pd.DataFrame(new_matrix))
+    # print(pd.DataFrame(new_matrix))
     bbi, bbir = find_basic_columns(new_matrix[:-1, :-1], new_matrix[:-1, -1])
-    print(f'This matrix has basic columns: {bbi} and their rows {bbir}')
+    # print(f'This matrix has basic columns: {bbi} and their rows {bbir}')
 
-    print(f'We perform the pivoting thingy on it')
+    # print(f'We perform the pivoting thingy on it')
     phase_two_matrix = pivot_coeffs(new_matrix, bbi, bbir)
-    print(pd.DataFrame(phase_two_matrix))
+    # print(pd.DataFrame(phase_two_matrix))
 
-    print(f'And off to simplex it goes!')
+    # print(f'And off to simplex it goes!')
     
     phase_two_simplex_result = t_simplex(phase_two_matrix, bbi, phase=2)
     phase_two_simplex_result['opt_point_phase_two'] = phase_two_simplex_result['opt_point']
     phase_two_simplex_result['opt_point'] = phase_two_simplex_result['opt_point'][:len(c)]
-    print(f'Simplex last tableau: ')
-    print(pd.DataFrame(phase_two_simplex_result['last_matrix']))
-    print(f'Basics being: {phase_two_simplex_result["basic_indices"]}')
-    print(f'And solution: ')
-    print(phase_two_simplex_result['opt_point'])
+    # print(f'Simplex last tableau: ')
+    # print(pd.DataFrame(phase_two_simplex_result['last_matrix']))
+    # print(f'Basics being: {phase_two_simplex_result["basic_indices"]}')
+    # print(f'And solution: ')
+    # print(phase_two_simplex_result['opt_point'])
 
 
     return phase_two_simplex_result
 
 
 def solve_lp(c, eqA, eqb, leqA, leqb, maxx=False):
+    c = np.array(c)
+    eqA = np.array(eqA)
+    eqb = np.array(eqb)
+    leqA = np.array(leqA)
+    leqb = np.array(leqb)
     orig_n = len(c)
 
     eqA, eqb = lpp.convert_to_eq(leqA, leqb, eqA, eqb)
@@ -356,36 +361,42 @@ def example7():
     test_against_scipy(A, b, c)
 
 if __name__ == '__main__':
+    example1()
+    example2()
+    example3()
+    example4()
+    example5()
+    example6()
+    example7()
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('-i', 
+    #                     '--input',
+    #                      help='The input file.',
+    #                      required=True)
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-i', 
-                        '--input',
-                         help='The input file.',
-                         required=True)
+    # parser.add_argument('-m',
+    #                     '--maximize',
+    #                     action='store_true',
+    #                     help='Maximize the objective function (minimization is default).')
 
-    parser.add_argument('-m',
-                        '--maximize',
-                        action='store_true',
-                        help='Maximize the objective function (minimization is default).')
+    # args = parser.parse_args()
+    # input_lines = lpp.read_lines_ds(args.input)
 
-    args = parser.parse_args()
-    input_lines = lpp.read_lines_ds(args.input)
+    # c, eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(input_lines)
 
-    c, eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(input_lines)
+    # stdout_backup = sys.stdout
+    # sys.stdout = open('dummy_out.txt', 'w')
+    # res = solve_lp(c, eqA, eqb, leqA, leqb, args.maximize)
+    # sys.stdout = stdout_backup
 
-    stdout_backup = sys.stdout
-    sys.stdout = open('dummy_out.txt', 'w')
-    res = solve_lp(c, eqA, eqb, leqA, leqb, args.maximize)
-    sys.stdout = stdout_backup
-
-    print(f'>> {res["message"]}')
-    if not res['bounded']:
-        sys.exit(0)
+    # print(f'>> {res["message"]}')
+    # if not res['bounded']:
+    #     sys.exit(0)
     
-    print(f'Optimal value: ')
-    print(f'\t{res["opt_val"]}')
-    print(f'Optimum reached for point: ')
-    print(f'\t{tuple(res["opt_point"])}')
+    # print(f'Optimal value: ')
+    # print(f'\t{res["opt_val"]}')
+    # print(f'Optimum reached for point: ')
+    # print(f'\t{tuple(res["opt_point"])}')
     
 
 
