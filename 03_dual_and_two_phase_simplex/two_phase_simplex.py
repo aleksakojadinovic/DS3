@@ -166,7 +166,7 @@ def two_phase_simplex_solver(c, eqA, eqb):
     sub_problem_simplex_matrix = construct_sub_simplex_matrix(eqA, eqb, artificial_row_indices)
 
     # print(f'We will now append the sub-problem objective function:')
-    print(sub_problem_simplex_matrix)
+    # print(sub_problem_simplex_matrix)
 
     sub_problem_simplex_matrix = pivot_ones(sub_problem_simplex_matrix, artificial_row_indices)
 
@@ -225,7 +225,7 @@ def two_phase_simplex_solver(c, eqA, eqb):
     new_matrix, [artificial_indices, last_basic_indices] = remove_columns_and_fix_index_lists(new_matrix, cols_to_delete, [artificial_indices, last_basic_indices])
     
     # print(f'After removing all kinds of stuff from it we have the following matrix: ')
-    print(pd.DataFrame(new_matrix))
+    # print(pd.DataFrame(new_matrix))
 
     
     # print(f'Now we just append our old target function')
@@ -332,12 +332,20 @@ def example5():
     b = [40, -10, -10]
     test_against_scipy(A, b, c)
 
+def example6():
+    c = [1, 1, -1, -1]
+    A = [[1, 2, 3, 1],
+         [2, -1, -1, -3]]
+    b = [7, -1]
+    test_against_scipy(A, b, c)
+
 if __name__ == '__main__':
-    # example1()
-    # example2()
-    # example3()
-    # example4()
+    example1()
+    example2()
+    example3()
+    example4()
     example5()
+    example6()
     # input_file = sys.argv[-1]
     # lines = lpp.read_lines_ds(input_file)
     # eqA, eqb, leqA, leqb = lpp.parse_any_lp_input(lines)
