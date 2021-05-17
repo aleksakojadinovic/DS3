@@ -14,7 +14,7 @@ f - Target function c0, ... c_{n-1}
 A - m x n constraint matrix
 b - right side vector
 """
-def dual_simplex(simplex_matrix, gimme_matrix=False):
+def dual_simplex(simplex_matrix):
     simplex_matrix = np.array(simplex_matrix, dtype='float64')
     canon_m, canon_n = simplex_matrix.shape
     m = canon_m - 1
@@ -30,11 +30,7 @@ def dual_simplex(simplex_matrix, gimme_matrix=False):
         dslog('---K1')
         
         if (b >= 0).all():
-            dslog(f'\t All bs are positive, optimal found.')
-            if gimme_matrix:
-                return None, np.round(-simplex_matrix[-1, -1], DEC), simplex_matrix
-            else:
-                return None, np.round(-simplex_matrix[-1, -1], DEC)
+            return None, np.round(-simplex_matrix[-1, -1], DEC)
         
         neg_indices = np.argwhere(b < 0).T[0]
         dslog(f'Neg indices: {neg_indices}')
@@ -42,15 +38,11 @@ def dual_simplex(simplex_matrix, gimme_matrix=False):
         dslog('---K2')
         if np.apply_along_axis(np.all, 1, A[neg_indices]).any():
             dslog(f'\t Found positive row, no solution.')
-            if gimme_matrix:
-                return None, None, simplex_matrix
-            else:
-                return None, None
+            return None, None
                 
         dslog('No positive column found, continue to K3.')
 
         dslog('---K3')
-        # TODO: Add Blend flag 
         s = neg_indices[-1]
         dslog(f'Choosing s = {s}')
         # Now find 
@@ -67,14 +59,10 @@ def dual_simplex(simplex_matrix, gimme_matrix=False):
 
         if r is None:
             dslog(f"\t Couldn't find r_max, no solution.")
-            if gimme_matrix:
-                return None, None, simplex_matrix
-            else:
-                return None, None
+            return None, None
 
 
         dslog(f'r = {r} with Asr = {simplex_matrix[s][r]}')
-
         dslog('---K4')
      
         # Here we include the last one
