@@ -1,10 +1,6 @@
-# Dual Simplex Algorithm
+# Two Phase and Dual Simplex methods
 
-TODO
-
-# Two Phase Simplex algorithm
-
-Linear programming problem solver using two-phase simplex method.
+Linear programming problem solvers using two-phase simplex method or dual simplex method.
 __________________________________________
 ### Usage:
 
