@@ -49,7 +49,8 @@ def parse_matrix_dimensions(line):
 
 
 def parse_any_lp_input(lines):
-    
+    if len(lines) < 3:
+        fatal_parse_error(f'Expecting at least 3 lines in input (dimension, objective function, constraint)')
     m, n = parse_matrix_dimensions(lines[0])
 
     c = parse_n_floats(n, lines[1])
