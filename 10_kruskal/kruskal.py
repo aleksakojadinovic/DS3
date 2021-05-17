@@ -1,9 +1,22 @@
 import numpy as np
+import argparse
 import networkx as nx
 import matplotlib.pyplot as plt
 
 
 class Graph:
+    @staticmethod
+    def from_matrix(matrix):
+        m, n = matrix.shape
+        if m != n:
+            raise ValueError(f'Expecting square matrix, got {m} x {n}')
+        
+        g = Graph(n)
+        for i in range(n):
+            for j in range(n):
+                if matrix[i][j] != 0:
+                    g.connect(i, j, matrix[i][j])
+        return g
 
     def __init__(self, num_nodes) -> None:
         self.num_nodes = num_nodes
@@ -95,7 +108,7 @@ def run_kruskal(g, visualize=True):
     if not visualize:
         return
 
-        
+
     nxg = g.to_networkx_graph()    
     nx_all_edges = nxg.edges()  
 
@@ -110,23 +123,19 @@ def run_kruskal(g, visualize=True):
     nx.draw_networkx_edge_labels(nxg, pos, edge_labels=labels)
 
     plt.show()
-
-def example1():
-    g = Graph(7)
-    g.connect(0, 1, 1)
-    g.connect(1, 2, 3)
-    g.connect(2, 3, 2)
-    g.connect(3, 0, 3)
-    g.connect(0, 2, 4)
-
-    g.connect(4, 5, 4)
-    g.connect(5, 6, 2)
-    g.connect(4, 6, 3)
-
-    run_kruskal(g, visualize=False)
-
-    
-
-
+   
 if __name__ == '__main__':
-    example1()
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-i',
+                        '--input',
+                        required=True,
+                        help='The input file.')
+
+    parser.add_argument('-v',
+                        '--visualize',
+                        action='store_true',
+                        help='Show networkx visualization of resulting tree.')
+
+    args = parser.parse_args()
+    g = Graph.from_matrix(np.loadtxt(args.input))
+    run_kruskal(g, args.visualize)
