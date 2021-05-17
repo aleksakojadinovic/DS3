@@ -1,43 +1,11 @@
+import sys
+
+sys.path.append('../_simplex_utils')
+from lp_utils import swap_basis
+from lp_utils import fetch_sol_from_simplex_matrix
+
 import numpy as np
 
-def pivot_basis(simplex_matrix, basic_indices, i0, j0):
-    basic_indices = np.array(basic_indices)
-
-    found = False    
-
-    for ii, basic_index in enumerate(basic_indices):
-        
-        curr_basic_column = simplex_matrix[:-1, basic_index].copy()
-
-        curr_basic_non_zero = np.invert(np.isclose(curr_basic_column, 0))
-        curr_non_zero_idx_idces = np.argwhere(curr_basic_non_zero)[0]
-        curr_non_zero_idx = curr_non_zero_idx_idces[0]
-        
-    
-        
-        if curr_non_zero_idx == i0:
-            found = True
-            basic_indices[ii] = j0
-            break
-
-    if not found:
-        print('ovde puklo')
-        raise ValueError(f'Means my algorithm is wrong because I cannot find leaving basis')
-
-    return list(basic_indices)
-
-def fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices):   
-    m, n = simplex_matrix.shape
-
-    solution = np.zeros(n-1)
-    for j in basic_indices:
-        
-
-        row_idx = np.argwhere(np.invert(np.isclose(simplex_matrix[:-1, j], 0)))[0][0]
-        coeff = simplex_matrix[row_idx, j]
-        solution[j] = simplex_matrix[row_idx, -1] / coeff
-
-    return solution
 
 def tableau_simplex(simplex_matrix, basic_indices, phase=None):
 
@@ -110,7 +78,7 @@ def tableau_simplex(simplex_matrix, basic_indices, phase=None):
             return simplex_result
 
         ai0j0 = simplex_matrix[i0][j0]
-        basic_indices = pivot_basis(simplex_matrix, basic_indices, i0, j0)
+        basic_indices = swap_basis(simplex_matrix, basic_indices, i0, j0)
 
         for i in range(sim_m):
 
