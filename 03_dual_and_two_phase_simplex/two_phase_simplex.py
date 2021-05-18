@@ -1,9 +1,12 @@
 import sys
+
+from pandas.core.reshape.pivot import pivot
 sys.path.append('../_simplex_utils/')
 
 import argparse
 
 import numpy as np
+import pandas as pd
 from scipy.optimize import linprog
 import warnings
 
@@ -22,6 +25,8 @@ def adv_prep(eqA, eqb):
     m, n = eqA.shape
 
     unit_column_indices, unit_column_row_indices = find_basic_columns(eqA, eqb)
+    # ----------------------- TMP
+    # unit_column_indices, unit_column_row_indices = find_basic(eqA)
 
     if len(unit_column_indices) == m:
         return eqA, eqb, unit_column_indices, [], []
@@ -33,7 +38,7 @@ def adv_prep(eqA, eqb):
 
 
     artificial_unit_row_indices        = [i for i in range(m) if i not in unit_column_row_indices]
-    artificial_unit_column_indices  = []
+    artificial_unit_column_indices     = []
     for missing_row_index in artificial_unit_row_indices:
         artificial_column = np.zeros(m)
         artificial_column[missing_row_index] = 1.0 * sign_zero(eqb[missing_row_index])
@@ -96,6 +101,104 @@ def convert_b_to_pos(eqA, eqb):
 
     return eqA, eqb
 
+# ----------------------- TMP
+def find_basic(matrix):
+    m, n = matrix.shape
+    unit_column_indices     = []
+    unit_column_row_indices = []
+    for j in range(n):
+        col = matrix[:, j]
+        if len(col[np.isclose(col, 0)]) == m - 1:
+            at_row = np.argwhere(np.invert(np.isclose(col, 0)))[0][0]
+            if at_row in unit_column_row_indices:
+                continue
+            unit_column_indices.append(j)
+            unit_column_row_indices.append(at_row)
+
+    return unit_column_indices, unit_column_row_indices
+
+def pivot_around(matrix, i0, j0):
+    base_coeff = matrix[i0, j0]
+    if np.isclose(base_coeff, 0.0):
+        raise ValueError(f'Cannot pivot around 0-value')
+    base_row   = matrix[i0]
+    for i, row in enumerate(matrix):
+        if i == i0:
+            continue
+        if np.isclose(row[j0], 0.0):
+            continue
+        other_coeff = matrix[i, j0]
+        other_row   = matrix[i]
+        matrix[i] = (-base_coeff/other_coeff) * base_row + other_row
+
+    return matrix
+
+def phase_one_cleanup(matrix, basic_indices, artificial_indices):
+    # STEP 1: Non-basic artificial columns can just be removed
+    print(f'Starting matrix cleanup')
+    print(f'Matrix: ')
+    print(pd.DataFrame(matrix))
+    print(f'\tbasic indices: {basic_indices}')
+    print(f'\tartif indices: {artificial_indices}')
+    m, n = matrix.shape
+    cols_to_delete = []
+    for j in range(n - 1):
+        if j not in basic_indices and j in artificial_indices:
+            print(f'\t\tColumn {j} is artificial and not basic so we just schedule it for removal.')
+            cols_to_delete.append(j)
+
+    print(f'After removing columns {cols_to_delete} we have')
+    artificial_indices = list(filter(lambda x: x not in cols_to_delete, artificial_indices))
+    matrix, [basic_indices, artificial_indices] = remove_columns_and_fix_index_lists(matrix, cols_to_delete, [basic_indices, artificial_indices])
+
+    print(f'Matrix: ')
+    print(pd.DataFrame(matrix))
+    print(f'\tbasic indices: {basic_indices}')
+    print(f'\tartif indices: {artificial_indices}')
+
+    if not artificial_indices:
+        print(f'No more artificial, so cleanup is done!')
+        return matrix
+
+    # STEP 2: Now we have some artificial columns that are indeed basic
+    # We distinguish two cases here
+    # Step 2a: In this case we remove both row and column entirely
+    m, n = matrix.shape
+    cols_to_delete = []
+    for j in artificial_indices:
+        row_idx = np.argwhere(np.invert(np.isclose(matrix[:-1, j], 0.0)))[0][0]
+        print(f'\t\tChecking column {matrix[:-1, j]} with its row {matrix[row_idx, :-1]}')
+        if len(np.isclose(matrix[row_idx, :-1], 0.0)) == len(matrix[row_idx, :-1] - 1):
+            print(f'\t\t\tArtificial and basic column {j} corresponds to row {row_idx} which is all zeros, so remove row and schedule column for removal.')
+            cols_to_delete.append(j)
+            # We can remove the row immediately
+            matrix = np.delete(matrix, obj=row_idx, axis=0)
+
+    print(f'After removing columns {cols_to_delete} we have and their respective rows, we have')
+    artificial_indices = list(filter(lambda x: x not in cols_to_delete, artificial_indices))
+    matrix, [basic_indices, artificial_indices] = remove_columns_and_fix_index_lists(matrix, cols_to_delete, [basic_indices, artificial_indices])
+
+    print(f'Matrix: ')
+    print(pd.DataFrame(matrix))
+    print(f'\tbasic indices: {basic_indices}')
+    print(f'\tartif indices: {artificial_indices}')
+
+    if not artificial_indices:
+        print(f'No more artificial, so cleanup is done!')
+        return matrix
+
+    # Step 2b: Some basic and artificial columns have non zero in their respective row
+    #          Here we pivot around that value
+    for j in artificial_indices:
+        print(f'\t\tWe have to pivot around column {j}')
+        row_idx = np.argwhere(np.invert(np.isclose(matrix[:-1, j], 0.0)))[0][0]
+        row = matrix[row_idx, :-1]
+        non_zero_idx = np.argwhere(np.invert(np.isclose(row, 0.0)))[0][0]
+        matrix = pivot_around(matrix, non_zero_idx, j)
+
+    return matrix
+
+
 # Assumes all constrains have been converted to equalities
 def two_phase_simplex_solver(c, eqA, eqb):
     c   = np.array(c, dtype=FLOAT_T)
@@ -111,48 +214,51 @@ def two_phase_simplex_solver(c, eqA, eqb):
         raise ValueError(f'eqA has {m} constraints but b-vector has {len(eqb)} values')
 
 
-    # print(f'Starting two phase simplex solver with')
-    # print(f'A = ')
-    # print(eqA)
-    # print(f'b = ')
-    # print(eqb)
+    print(f'Starting two phase simplex solver with')
+    print(f'A = ')
+    print(pd.DataFrame(eqA))
+    print(f'b = ')
+    print(eqb)
 
     eqA, eqb = convert_b_to_pos(eqA, eqb)
-    # print(f'Converting all bs to positive, resulting in: ')
-    # print(f'A = ')
-    # print(eqA)
-    # print(f'b = ')
-    # print(eqb)
+    print(f'Converting all bs to positive, resulting in: ')
+    print(f'A = ')
+    print(pd.DataFrame(eqA))
+    print(f'b = ')
+    print(eqb)
 
 
-    # print(f'Starting preparation')
+    print(f'Starting preparation')
     eqA, eqb, basic_indices, artificial_indices, artificial_row_indices = adv_prep(eqA, eqb)
 
-    # print(f'After preparation we have:')
-    # print(f'A = ')
-    # print(eqA)
-    # print(f'b = ')
-    # print(eqb)
-    # print(f'Basic indices: {basic_indices}')
-    # print(f'Artificial indices: {artificial_indices}')
-    # print(f'Artificial row indices: {artificial_row_indices}')
+    print(f'After preparation we have:')
+    print(f'A = ')
+    print(pd.DataFrame(eqA))
+    print(f'b = ')
+    print(eqb)
+    print(f'Basic indices: {basic_indices}')
+    print(f'Artificial indices: {artificial_indices}')
+    print(f'Artificial row indices: {artificial_row_indices}')
 
     sub_problem_simplex_matrix = construct_sub_simplex_matrix(eqA, eqb, artificial_row_indices)
 
-    # print(f'We will now append the sub-problem objective function:')
-    # print(sub_problem_simplex_matrix)
+    print(f'We will now append the sub-problem objective function:')
+    print(pd.DataFrame(sub_problem_simplex_matrix))
 
     sub_problem_simplex_matrix = pivot_ones(sub_problem_simplex_matrix, artificial_row_indices)
 
-    # print(f'Now we do the pivot thingy and get:')
-    # print(sub_problem_simplex_matrix)
+    print(f'Now we eliminate artificial variables from objective function:')
+    print(pd.DataFrame(sub_problem_simplex_matrix))
 
-    # print(f'Now we send that to phase one simplex, along with basic indices being: ')
-    # print(basic_indices)
+    print(f'Now we send that to phase one simplex, along with basic indices being: ')
+    print(basic_indices)
 
     phase_one_simplex_result = t_simplex(sub_problem_simplex_matrix, basic_indices, phase=1)
 
     if not phase_one_simplex_result['bounded']:
+        print(f'Phase one simplex is not bounded, its last matrix is: ')
+        print(pd.DataFrame(phase_one_simplex_result["last_matrix"]))
+        print(f'And its basics are {phase_one_simplex_result["basic_indices"]}')
         return phase_one_simplex_result
 
     
@@ -163,69 +269,91 @@ def two_phase_simplex_solver(c, eqA, eqb):
     phase_one_opt = phase_one_simplex_result['opt_val']
 
     if not np.isclose(phase_one_opt, 0.0):
+        print(f'Phase one opt is not zero, its last matrix is: ')
+        print(pd.DataFrame(phase_one_simplex_result["last_matrix"]))
+        print(f'And its basics are {phase_one_simplex_result["basic_indices"]}')
         phase_one_simplex_result['bounded'] = False
         phase_one_simplex_result['message'] = 'Phase one optimum iz non-zero'
         return phase_one_simplex_result
 
 
-    # print(f'Phase one simplex is good, and it gives us this tableau: ')
-    # print(pd.DataFrame(last_matrix))
-    # print(f'With last basic indices being: {last_basic_indices}')
+    print(f'Phase one simplex is good, and it gives us this tableau: ')
+    print(pd.DataFrame(last_matrix))
+    print(f'With last basic indices being: {last_basic_indices}')
 
-    cols_to_delete = []
-    for artif_index in artificial_indices:
-        if artif_index in last_basic_indices:
-            continue
-        cols_to_delete.append(artif_index)
+    print(f'Now we send it to cleanup')
+    new_matrix = phase_one_cleanup(last_matrix, last_basic_indices, artificial_indices)
+    print(f'After cleanup our matrix is:')
+    print(pd.DataFrame(new_matrix))
+    # cols_to_delete = []
+    # for artif_index in artificial_indices:
+    #     if artif_index in last_basic_indices:
+    #         continue
+    #     print(f'\t Column {artif_index} is artificial and non basic so we schedule it for removal.')
+    #     cols_to_delete.append(artif_index)
 
-    artificial_indices = [a for a in artificial_indices if a not in cols_to_delete]
+    # artificial_indices = [a for a in artificial_indices if a not in cols_to_delete]
 
-    new_matrix, [artificial_indices] = remove_columns_and_fix_index_lists(last_matrix, cols_to_delete, [artificial_indices])
+    # new_matrix, [artificial_indices, last_basic_indices] = remove_columns_and_fix_index_lists(last_matrix, cols_to_delete, [artificial_indices, last_basic_indices])
+    # print(f'After first round of removal:')
+    # print(pd.DataFrame(new_matrix))
 
-    cols_to_delete = []
-    for art_and_basic in artificial_indices:
-        row_idx = np.argwhere(new_matrix[:, art_and_basic] == 1)[0][0]
-        row = new_matrix[row_idx]
-        
-        if (len(row[np.invert(np.isclose(row, 0.0))]) == len(row) - 1):
-            artificial_indices.remove(art_and_basic)
-            cols_to_delete.append(art_and_basic)
-            new_matrix = np.delete(new_matrix, [row_idx], axis=0)
+    # print(f'Now all remaining artificial variables are also basic: {artificial_indices}')
 
- 
-    new_matrix, [artificial_indices] = remove_columns_and_fix_index_lists(new_matrix, cols_to_delete, [artificial_indices])
+    # cols_to_delete = []
+    # for art_and_basic in last_basic_indices:
+    #     row_idx = np.argwhere(new_matrix[:, art_and_basic] != 0)[0][0]
+    #     row = new_matrix[row_idx]
+
+    #     print(f'\tConsidering removal of column {new_matrix[:-1, art_and_basic]} along with row {row}')
+
+    #     if (len(row[np.isclose(row, 0.0)]) == len(row) - 1):
+    #         artificial_indices.remove(art_and_basic)
+    #         cols_to_delete.append(art_and_basic)
+    #         new_matrix = np.delete(new_matrix, [row_idx], axis=0)
+
+    # print(f'Scheduled for second round of removal are columns {cols_to_delete}') 
+    # new_matrix, [artificial_indices] = remove_columns_and_fix_index_lists(new_matrix, cols_to_delete, [artificial_indices])
+
     
-    # print(f'After removing all kinds of stuff from it we have the following matrix: ')
+    # print(f'After second round of removal we have:')
     # print(pd.DataFrame(new_matrix))
 
     
-    # print(f'Now we just append our old target function')
+    print(f'Now we just append our old target function')
     new_matrix_n = new_matrix.shape[1]
     if new_matrix_n == len(c):
-        new_matrix[-1, :] = np.vstack((new_matrix, c))
+        new_matrix[-1, :] = c
     else:
         diff = new_matrix.shape[1] - len(c)
         new_target = np.append(c, np.zeros(diff))
         new_matrix[-1, :] = new_target
 
-    # print(pd.DataFrame(new_matrix))
+    print(pd.DataFrame(new_matrix))
     bbi, bbir = find_basic_columns(new_matrix[:-1, :-1], new_matrix[:-1, -1])
-    # print(f'This matrix has basic columns: {bbi} and their rows {bbir}')
 
-    # print(f'We perform the pivoting thingy on it')
+    print(f'This matrix has basic columns: {bbi} and their rows {bbir}')
+
+    print(f'We eliminate basic variables from objective function:')
     phase_two_matrix = pivot_coeffs(new_matrix, bbi, bbir)
-    # print(pd.DataFrame(phase_two_matrix))
+    print(pd.DataFrame(phase_two_matrix))
 
-    # print(f'And off to simplex it goes!')
+    print(f'And off to simplex it goes!')
     
     phase_two_simplex_result = t_simplex(phase_two_matrix, bbi, phase=2)
     phase_two_simplex_result['opt_point_phase_two'] = phase_two_simplex_result['opt_point']
     phase_two_simplex_result['opt_point'] = phase_two_simplex_result['opt_point'][:len(c)]
-    # print(f'Simplex last tableau: ')
-    # print(pd.DataFrame(phase_two_simplex_result['last_matrix']))
-    # print(f'Basics being: {phase_two_simplex_result["basic_indices"]}')
-    # print(f'And solution: ')
-    # print(phase_two_simplex_result['opt_point'])
+
+    if not phase_two_simplex_result['bounded']:
+        print(f'Phase two simplex is not bounded, its last matrix is: ')
+        print(pd.DataFrame(phase_two_simplex_result["last_matrix"]))
+        print(f'And its basics are {phase_two_simplex_result["basic_indices"]}')
+
+    print(f'Simplex last tableau: ')
+    print(pd.DataFrame(phase_two_simplex_result['last_matrix']))
+    print(f'Basics being: {phase_two_simplex_result["basic_indices"]}')
+    print(f'And solution: ')
+    print(phase_two_simplex_result['opt_point'])
 
 
     return phase_two_simplex_result
@@ -244,8 +372,10 @@ def solve_lp(c, eqA, eqb, leqA, leqb, maxx=False):
 
     if maxx:
         c *= -1
-
+    stdout_backup = sys.stdout
+    sys.stdout = open('two_phase_log.txt', 'w')
     res = two_phase_simplex_solver(c, eqA, eqb)
+    sys.stdout = stdout_backup
 
     if maxx:
         res['opt_val'] *= -1
@@ -376,6 +506,10 @@ if __name__ == '__main__':
     print(f'\t{res["opt_val"]}')
     print(f'Optimum reached for point: ')
     print(f'\t{tuple(res["opt_point"])}')
+
+    print('--debug')
+    print(f'And dotting function {c} with point {res["opt_point"]} gives')
+    print('\t', np.dot(c, res["opt_point"]))
     
 
 

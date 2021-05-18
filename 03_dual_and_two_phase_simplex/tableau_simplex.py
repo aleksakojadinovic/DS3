@@ -5,6 +5,7 @@ from lp_utils import swap_basis
 from lp_utils import fetch_sol_from_simplex_matrix
 
 import numpy as np
+import pandas as pd
 
 
 def tableau_simplex(simplex_matrix, basic_indices, phase=None):
@@ -18,15 +19,16 @@ def tableau_simplex(simplex_matrix, basic_indices, phase=None):
 
 
     sim_m, sim_n = simplex_matrix.shape
-    for i in range(sim_m - 1):
-        if simplex_matrix[i, -1] < 0:
-            simplex_matrix[i] *= -1
+    # for i in range(sim_m - 1):
+    #     if simplex_matrix[i, -1] < 0:
+    #         simplex_matrix[i] *= -1
 
     iteration = 1
     
 
-    while True:
+    
 
+    while True:
         c = simplex_matrix[-1, :-1]
         b = simplex_matrix[:-1, -1]
         if (c >= 0).all():
