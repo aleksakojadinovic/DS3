@@ -7,6 +7,16 @@ def sign_zero(a):
     else:
         return 1
 
+def sign_eq(a, b):
+    if np.isclose(a, 0.0) or np.isclose(b, 0.0):
+        return True
+    if a > 0 and b > 0:
+        return True
+    if a < 0 and b < 0:
+        return True
+    return False
+    
+
 def find_basic_columns(eqA, eqb):
     m, n = eqA.shape
     unit_column_indices     = []
