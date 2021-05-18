@@ -27,7 +27,9 @@ def find_basic_columns(eqA, eqb):
             at_row = np.argwhere(np.invert(np.isclose(col, 0)))[0][0]
             if at_row in unit_column_row_indices:
                 continue
-            if sign_zero(col[at_row]) != sign_zero(eqb[at_row]):
+            # if sign_zero(col[at_row]) != sign_zero(eqb[at_row]):
+            #     continue
+            if not sign_eq(col[at_row], eqb[at_row]):
                 continue
             unit_column_indices.append(j)
             unit_column_row_indices.append(at_row)
