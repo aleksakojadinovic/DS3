@@ -249,8 +249,8 @@ def two_phase_simplex_solver(c, eqA, eqb):
     print(f'We will now append the sub-problem objective function:')
     print(pd.DataFrame(sub_problem_simplex_matrix))
 
-    sub_problem_simplex_matrix = pivot_coeffs(sub_problem_simplex_matrix, artificial_indices, artificial_row_indices)
-    # sub_problem_simplex_matrix = pivot_ones(sub_problem_simplex_matrix, artificial_row_indices)
+    # sub_problem_simplex_matrix = pivot_coeffs(sub_problem_simplex_matrix, artificial_indices, artificial_row_indices)
+    sub_problem_simplex_matrix = pivot_ones(sub_problem_simplex_matrix, artificial_row_indices)
 
     print(f'Now we eliminate artificial variables from objective function:')
     print(pd.DataFrame(sub_problem_simplex_matrix))
