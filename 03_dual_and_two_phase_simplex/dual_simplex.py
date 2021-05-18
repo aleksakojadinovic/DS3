@@ -45,7 +45,7 @@ f - Target function c0, ... c_{n-1}
 A - m x n constraint matrix
 b - right side vector
 """
-def dual_simplex_(simplex_matrix):
+def dual_simplex_(simplex_matrix, *args, **kwargs):
     simplex_matrix = np.array(simplex_matrix, dtype=FLOAT_T)
     basic_column_indices, _ = find_basic(simplex_matrix[:-1, :-1])
 

@@ -11,12 +11,16 @@ from scipy.optimize import linprog
 import warnings
 
 from tableau_simplex import tableau_simplex as t_simplex
+from dual_simplex import dual_simplex_ as d_simplex
 from lp_utils import find_basic_columns
 from lp_utils import sign_zero
 import lp_parse as lpp
  
 
 FLOAT_T = 'float64'
+
+
+UTIL_SIMPLEX_FUNC_ = t_simplex
 
 def adv_prep(eqA, eqb):
     eqA = np.array(eqA, dtype=FLOAT_T)
@@ -245,7 +249,8 @@ def two_phase_simplex_solver(c, eqA, eqb):
     print(f'We will now append the sub-problem objective function:')
     print(pd.DataFrame(sub_problem_simplex_matrix))
 
-    sub_problem_simplex_matrix = pivot_ones(sub_problem_simplex_matrix, artificial_row_indices)
+    sub_problem_simplex_matrix = pivot_coeffs(sub_problem_simplex_matrix, artificial_indices, artificial_row_indices)
+    # sub_problem_simplex_matrix = pivot_ones(sub_problem_simplex_matrix, artificial_row_indices)
 
     print(f'Now we eliminate artificial variables from objective function:')
     print(pd.DataFrame(sub_problem_simplex_matrix))
@@ -253,7 +258,7 @@ def two_phase_simplex_solver(c, eqA, eqb):
     print(f'Now we send that to phase one simplex, along with basic indices being: ')
     print(basic_indices)
 
-    phase_one_simplex_result = t_simplex(sub_problem_simplex_matrix, basic_indices, phase=1)
+    phase_one_simplex_result = UTIL_SIMPLEX_FUNC_(sub_problem_simplex_matrix, basic_indices, phase=1)
 
     if not phase_one_simplex_result['bounded']:
         print(f'Phase one simplex is not bounded, its last matrix is: ')
@@ -340,7 +345,7 @@ def two_phase_simplex_solver(c, eqA, eqb):
 
     print(f'And off to simplex it goes!')
     
-    phase_two_simplex_result = t_simplex(phase_two_matrix, bbi, phase=2)
+    phase_two_simplex_result = UTIL_SIMPLEX_FUNC_(phase_two_matrix, bbi, phase=2)
     phase_two_simplex_result['opt_point_phase_two'] = phase_two_simplex_result['opt_point']
     phase_two_simplex_result['opt_point'] = phase_two_simplex_result['opt_point'][:len(c)]
 
