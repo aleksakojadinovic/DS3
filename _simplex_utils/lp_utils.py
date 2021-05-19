@@ -62,8 +62,6 @@ def fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices):
 
     solution = np.zeros(n-1)
     for j in basic_indices:
-        
-
         row_idx = np.argwhere(np.invert(np.isclose(simplex_matrix[:-1, j], 0)))[0][0]
         coeff = simplex_matrix[row_idx, j]
         solution[j] = simplex_matrix[row_idx, -1] / coeff
