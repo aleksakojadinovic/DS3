@@ -21,7 +21,7 @@ b1_0     b1_1   ... b1_n-1
 bn-1_0   bn-1_1 ... bn-1_n-1
 
 ```
-where `b_i_j` is the branch weight between nodes `i` and `j` (0 means not connected)
+where `b_i_j` is the edge weight between nodes `i` and `j` (0 means not connected)
 
 
 
