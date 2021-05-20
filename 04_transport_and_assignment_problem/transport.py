@@ -4,6 +4,7 @@ import sys
 import graphs
 import utils as ut
 import arg_parsing as ap
+import pandas as pd
 
 DUMMY_VALUE = 1000
 
@@ -25,10 +26,26 @@ DUMMY_VALUE = 1000
 # sum_{i=0,n-1} x_ij <= b_j  for all j  (DO NOT EXCEED DEMAND)
 # xij >= 0                              (NON NEGATIVE AMOUNTS)
 
+LOG_FILE = '.dummy.txt'
 
+def get_problem_df(C, a, b):
+    m, n = C.shape
+    problem_matrix_ = np.zeros((m+1, n+1), dtype='int32')
+    problem_matrix_[:m, :n] = C
+    problem_matrix_[:-1, -1] = a
+    problem_matrix_[-1, :-1] = b
+
+    return pd.DataFrame(problem_matrix_,
+                        index=[str(i) for i in range(m)] + ['b'],
+                        columns=[str(i) for i in range(n)] + ['a'])
 
 # Min cost method
 def min_cost_method(C, a, b):
+    problem_df_ = get_problem_df(C, a, b)
+    print(f' > Starting min cost method for: ')
+    print(problem_df_)
+
+    
     C = np.array(C, dtype='float64')
     a = np.array(a, dtype='float64')
     b = np.array(b, dtype='float32')
@@ -41,7 +58,13 @@ def min_cost_method(C, a, b):
     
     for _ in range(m + n - 1):
         p, q = ut.argmin_exclude(C, removed_rows, removed_columns)
+
+        print(f' >> Min position is {p, q} with cost = {C[p][q]}, supply = {a[p]}, demand = {b[q]}')
+
         the_min = min(a[p], b[q])
+
+        print(f'\t >> Min is {the_min}')
+
         X[p][q] = the_min
 
         a[p] = a[p] - the_min
@@ -49,13 +72,20 @@ def min_cost_method(C, a, b):
 
         
         if a[p] == 0:
+            print(f'\t >> Removing row {p}')
             removed_rows = np.append(removed_rows, p)
         elif b[q] == 0:
+            print(f'\t >> Removing column {q}')
             removed_columns = np.append(removed_columns, q)
+        
+        print(f'current solution: ')
+        print(pd.DataFrame(np.array(X, dtype='int32')))
+        print(f'a = {a}, b = {b}')
         
 
         cap_mask[p][q] = 1
-
+    print(f'> Basic feasible solution found by min cost method: ')
+    print(pd.DataFrame(X))
     return X, cap_mask
 
 # Returns index and axis of a potential
@@ -257,6 +287,8 @@ if __name__ == '__main__':
         print('Invalid input file.')
         sys.exit(1)
     
+    stdout_backup = sys.stdout
+    sys.stdout = open(LOG_FILE, 'w')
     just_runnit(problem_matrix)
 
 
