@@ -85,11 +85,14 @@ def kruskal(graph):
     component_indices = set(k)
     result = dict()
     result['components'] = dict()
+    total_weight = 0
     for aps_idx, component_idx in enumerate(component_indices):
         nodes_in_component = [i for i, c in enumerate(k) if c == component_idx]
         edges_in_component = [(u, v, w) for u, v, w in L if u in nodes_in_component and v in nodes_in_component]
+        total_weight += sum(w for _, _, w in edges_in_component)
         result['components'][aps_idx] = {"nodes": nodes_in_component, "edges": edges_in_component}
     result['all_edges'] = L
+    result['total_weight'] = total_weight
     return result
 
 def run_kruskal(g, visualize=True):
@@ -105,6 +108,9 @@ def run_kruskal(g, visualize=True):
         for u, v, _ in edge_list:
             print(f'\t\t{u}----{v}')
         
+
+    print(f'TOTAL_EDGE_WEIGHT: {kruskal_res["total_weight"]}')
+
     if not visualize:
         return
 

@@ -17,6 +17,30 @@ def sign_eq(a, b):
     return False
     
 
+def is_dual_matrix(simplex_matrix):
+    A, b, c, _ = unpack_matrix(simplex_matrix)
+    return is_dual_abc(c, A, b)
+
+def is_dual_abc(c, eqA, eqb):
+    
+    pass
+
+
+def pack_to_matrix(A, b, c):
+    m, n = A.shape
+    matrix = np.zeros((m, n))
+    matrix[:m, :n] = A
+    matrix[-1, :-1] = c
+    matrix[:-1, -1] = b
+    return matrix
+
+def unpack_matrix(matrix):
+    A = matrix[:-1, :-1]
+    b = matrix[:-1, -1]
+    c = matrix[-1, :-1]
+    F0 = matrix[-1, -1]
+    return A, b, c, F0
+
 def find_basic_columns(eqA, eqb):
     m, n = eqA.shape
     unit_column_indices     = []

@@ -512,9 +512,9 @@ if __name__ == '__main__':
     print(f'Optimum reached for point: ')
     print(f'\t{tuple(res["opt_point"])}')
 
-    print('--debug')
-    print(f'And dotting function {c} with point {res["opt_point"]} gives')
-    print('\t', np.dot(c, res["opt_point"]))
+    # print('--debug')
+    # print(f'And dotting function {c} with point {res["opt_point"]} gives')
+    # print('\t', np.dot(c, res["opt_point"]))
     
 
 
