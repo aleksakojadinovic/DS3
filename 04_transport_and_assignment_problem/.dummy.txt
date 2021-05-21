@@ -4,37 +4,13 @@
 1  350  300  100  20
 b   25   10   25   0
  >> Min position is (1, 2) with cost = 100.0, supply = 20.0, demand = 25.0
-	 >> Min is 20.0
 	 >> Removing row 1
-current solution: 
-   0  1   2
-0  0  0   0
-1  0  0  20
-a = [40.  0.], b = [25. 10.  5.]
  >> Min position is (0, 1) with cost = 300.0, supply = 40.0, demand = 10.0
-	 >> Min is 10.0
 	 >> Removing column 1
-current solution: 
-   0   1   2
-0  0  10   0
-1  0   0  20
-a = [30.  0.], b = [25.  0.  5.]
  >> Min position is (0, 2) with cost = 400.0, supply = 30.0, demand = 5.0
-	 >> Min is 5.0
 	 >> Removing column 2
-current solution: 
-   0   1   2
-0  0  10   5
-1  0   0  20
-a = [25.  0.], b = [25.  0.  0.]
  >> Min position is (0, 0) with cost = 550.0, supply = 25.0, demand = 25.0
-	 >> Min is 25.0
 	 >> Removing row 0
-current solution: 
-    0   1   2
-0  25  10   5
-1   0   0  20
-a = [0. 0.], b = [0. 0. 0.]
 > Basic feasible solution found by min cost method: 
       0     1     2
 0  25.0  10.0   5.0

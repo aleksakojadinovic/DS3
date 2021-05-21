@@ -17,18 +17,46 @@ def sign_eq(a, b):
     return False
     
 
-def is_dual_matrix(simplex_matrix):
+def find_basic_sign_(matrix, sign):
+    m, n = matrix.shape
+    unit_column_indices     = []
+    unit_column_row_indices = []
+    for j in range(n):
+        col = matrix[:, j]
+        if len(col[np.isclose(col, 0)]) == m - 1:
+            at_row = np.argwhere(np.invert(np.isclose(col, 0)))[0][0]
+            if at_row in unit_column_row_indices:
+                continue
+            if not sign_eq(col[at_row], sign):
+                continue
+            unit_column_indices.append(j)
+            unit_column_row_indices.append(at_row)
+
+    return unit_column_indices, unit_column_row_indices
+
+
+def check_for_duality(simplex_matrix):
     A, b, c, _ = unpack_matrix(simplex_matrix)
-    return is_dual_abc(c, A, b)
+    return check_for_duality_abc(c, A, b)
 
-def is_dual_abc(c, eqA, eqb):
-    
-    pass
+def check_for_duality_abc(c, eqA, eqb):
+    if not (eqb <= 0).any():
+        return False, [], []
 
+    m, n = eqA.shape
+    basic_col_indices, basic_row_indices = find_basic_sign_(eqA, -1)
+    if len(basic_col_indices) == m and np.isclose(c[basic_col_indices], 0.0).all():
+        return True, basic_col_indices, basic_row_indices
+
+    basic_col_indices, basic_row_indices = find_basic_sign_(eqA, +1)
+    if len(basic_col_indices) == m and np.isclose(c[basic_col_indices], 0.0).all():
+        return True, basic_col_indices, basic_row_indices
+
+    return False, [], []
 
 def pack_to_matrix(A, b, c):
     m, n = A.shape
-    matrix = np.zeros((m, n))
+    matrix = np.zeros((m+1, n+1))
     matrix[:m, :n] = A
     matrix[-1, :-1] = c
     matrix[:-1, -1] = b
@@ -91,3 +119,4 @@ def fetch_sol_from_simplex_matrix(simplex_matrix, basic_indices):
         solution[j] = simplex_matrix[row_idx, -1] / coeff
 
     return solution
+

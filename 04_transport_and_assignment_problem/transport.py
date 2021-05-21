@@ -63,8 +63,6 @@ def min_cost_method(C, a, b):
 
         the_min = min(a[p], b[q])
 
-        print(f'\t >> Min is {the_min}')
-
         X[p][q] = the_min
 
         a[p] = a[p] - the_min
@@ -77,11 +75,7 @@ def min_cost_method(C, a, b):
         elif b[q] == 0:
             print(f'\t >> Removing column {q}')
             removed_columns = np.append(removed_columns, q)
-        
-        print(f'current solution: ')
-        print(pd.DataFrame(np.array(X, dtype='int32')))
-        print(f'a = {a}, b = {b}')
-        
+           
 
         cap_mask[p][q] = 1
     print(f'> Basic feasible solution found by min cost method: ')

@@ -14,6 +14,8 @@ from tableau_simplex import tableau_simplex as t_simplex
 from dual_simplex import dual_simplex_ as d_simplex
 from lp_utils import find_basic_columns
 from lp_utils import sign_zero
+from lp_utils import check_for_duality_abc
+from lp_utils import pack_to_matrix
 import lp_parse as lpp
  
 
@@ -205,6 +207,9 @@ def phase_one_cleanup(matrix, basic_indices, artificial_indices):
 
 # Assumes all constrains have been converted to equalities
 def two_phase_simplex_solver(c, eqA, eqb):
+
+    
+
     c   = np.array(c, dtype=FLOAT_T)
     eqA = np.array(eqA, dtype=FLOAT_T)
     eqb = np.array(eqb, dtype=FLOAT_T)
@@ -224,12 +229,22 @@ def two_phase_simplex_solver(c, eqA, eqb):
     print(f'b = ')
     print(eqb)
 
+    is_dual, dual_basic_cols, _ = check_for_duality_abc(c, eqA, eqb)
+    if is_dual:
+        print(f'Dual simplex table detected')
+        
+        dual_simplex_matrix = pack_to_matrix(eqA, eqb, c)
+        print(pd.DataFrame(dual_simplex_matrix))
+        return d_simplex(dual_simplex_matrix, basic_column_indices=dual_basic_cols)
+
     eqA, eqb = convert_b_to_pos(eqA, eqb)
     print(f'Converting all bs to positive, resulting in: ')
     print(f'A = ')
     print(pd.DataFrame(eqA))
     print(f'b = ')
     print(eqb)
+
+
 
 
     print(f'Starting preparation')
@@ -290,39 +305,6 @@ def two_phase_simplex_solver(c, eqA, eqb):
     new_matrix = phase_one_cleanup(last_matrix, last_basic_indices, artificial_indices)
     print(f'After cleanup our matrix is:')
     print(pd.DataFrame(new_matrix))
-    # cols_to_delete = []
-    # for artif_index in artificial_indices:
-    #     if artif_index in last_basic_indices:
-    #         continue
-    #     print(f'\t Column {artif_index} is artificial and non basic so we schedule it for removal.')
-    #     cols_to_delete.append(artif_index)
-
-    # artificial_indices = [a for a in artificial_indices if a not in cols_to_delete]
-
-    # new_matrix, [artificial_indices, last_basic_indices] = remove_columns_and_fix_index_lists(last_matrix, cols_to_delete, [artificial_indices, last_basic_indices])
-    # print(f'After first round of removal:')
-    # print(pd.DataFrame(new_matrix))
-
-    # print(f'Now all remaining artificial variables are also basic: {artificial_indices}')
-
-    # cols_to_delete = []
-    # for art_and_basic in last_basic_indices:
-    #     row_idx = np.argwhere(new_matrix[:, art_and_basic] != 0)[0][0]
-    #     row = new_matrix[row_idx]
-
-    #     print(f'\tConsidering removal of column {new_matrix[:-1, art_and_basic]} along with row {row}')
-
-    #     if (len(row[np.isclose(row, 0.0)]) == len(row) - 1):
-    #         artificial_indices.remove(art_and_basic)
-    #         cols_to_delete.append(art_and_basic)
-    #         new_matrix = np.delete(new_matrix, [row_idx], axis=0)
-
-    # print(f'Scheduled for second round of removal are columns {cols_to_delete}') 
-    # new_matrix, [artificial_indices] = remove_columns_and_fix_index_lists(new_matrix, cols_to_delete, [artificial_indices])
-
-    
-    # print(f'After second round of removal we have:')
-    # print(pd.DataFrame(new_matrix))
 
     
     print(f'Now we just append our old target function')
@@ -512,9 +494,10 @@ if __name__ == '__main__':
     print(f'Optimum reached for point: ')
     print(f'\t{tuple(res["opt_point"])}')
 
-    # print('--debug')
-    # print(f'And dotting function {c} with point {res["opt_point"]} gives')
-    # print('\t', np.dot(c, res["opt_point"]))
+    print('--debug')
+    print(f'And dotting function {c} with point {res["opt_point"]} gives')
+    print('\t', np.dot(c, res["opt_point"]))
+    
     
 
 

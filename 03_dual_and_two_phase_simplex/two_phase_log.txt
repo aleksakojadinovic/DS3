@@ -1,107 +1,14 @@
 Starting two phase simplex solver with
 A = 
-     0    1    2    3    4
-0  1.0  1.0 -1.0  0.0  0.0
-1  2.0 -1.0  0.0 -1.0  0.0
-2  0.0  3.0  0.0  0.0  1.0
-b = 
-[1. 1. 2.]
-Converting all bs to positive, resulting in: 
-A = 
-     0    1    2    3    4
-0  1.0  1.0 -1.0  0.0  0.0
-1  2.0 -1.0  0.0 -1.0  0.0
-2  0.0  3.0  0.0  0.0  1.0
-b = 
-[1. 1. 2.]
-Starting preparation
-After preparation we have:
-A = 
      0    1    2    3    4    5    6
-0  1.0  1.0 -1.0  0.0  0.0  1.0  0.0
-1  2.0 -1.0  0.0 -1.0  0.0  0.0  1.0
-2  0.0  3.0  0.0  0.0  1.0  0.0  0.0
+0 -1.0  1.0 -1.0  1.0  1.0  0.0  0.0
+1 -1.0  2.0 -3.0  4.0  0.0  1.0  0.0
+2 -3.0  4.0 -5.0  6.0  0.0  0.0  1.0
 b = 
-[1. 1. 2.]
-Basic indices: [4, 5, 6]
-Artificial indices: [5, 6]
-Artificial row indices: [0, 1]
-We will now append the sub-problem objective function:
-     0    1    2    3    4    5    6    7
-0  1.0  1.0 -1.0  0.0  0.0  1.0  0.0  1.0
-1  2.0 -1.0  0.0 -1.0  0.0  0.0  1.0  1.0
-2  0.0  3.0  0.0  0.0  1.0  0.0  0.0  2.0
-3  0.0  0.0  0.0  0.0  0.0  1.0  1.0  0.0
-Now we eliminate artificial variables from objective function:
-     0    1    2    3    4    5    6    7
-0  1.0  1.0 -1.0  0.0  0.0  1.0  0.0  1.0
-1  2.0 -1.0  0.0 -1.0  0.0  0.0  1.0  1.0
-2  0.0  3.0  0.0  0.0  1.0  0.0  0.0  2.0
-3 -3.0  0.0  1.0  1.0  0.0  0.0  0.0 -2.0
-Now we send that to phase one simplex, along with basic indices being: 
-[4, 5, 6]
-Phase one simplex is good, and it gives us this tableau: 
-     0    1         2         3    4         5         6         7
-0  0.0  1.0 -0.666667  0.333333  0.0  0.666667 -0.333333  0.333333
-1  1.0  0.0 -0.333333 -0.333333  0.0  0.333333  0.333333  0.666667
-2  0.0  0.0  2.000000 -1.000000  1.0 -2.000000  1.000000  1.000000
-3  0.0  0.0  0.000000  0.000000  0.0  1.000000  1.000000  0.000000
-With last basic indices being: [4, 1, 0]
-Now we send it to cleanup
-Starting matrix cleanup
-Matrix: 
-     0    1         2         3    4         5         6         7
-0  0.0  1.0 -0.666667  0.333333  0.0  0.666667 -0.333333  0.333333
-1  1.0  0.0 -0.333333 -0.333333  0.0  0.333333  0.333333  0.666667
-2  0.0  0.0  2.000000 -1.000000  1.0 -2.000000  1.000000  1.000000
-3  0.0  0.0  0.000000  0.000000  0.0  1.000000  1.000000  0.000000
-	basic indices: [4, 1, 0]
-	artif indices: [5, 6]
-		Column 5 is artificial and not basic so we just schedule it for removal.
-		Column 6 is artificial and not basic so we just schedule it for removal.
-After removing columns [5, 6] we have
-Matrix: 
-     0    1         2         3    4         5
-0  0.0  1.0 -0.666667  0.333333  0.0  0.333333
-1  1.0  0.0 -0.333333 -0.333333  0.0  0.666667
-2  0.0  0.0  2.000000 -1.000000  1.0  1.000000
-3  0.0  0.0  0.000000  0.000000  0.0  0.000000
-	basic indices: [4, 1, 0]
-	artif indices: []
-No more artificial, so cleanup is done!
-After cleanup our matrix is:
-     0    1         2         3    4         5
-0  0.0  1.0 -0.666667  0.333333  0.0  0.333333
-1  1.0  0.0 -0.333333 -0.333333  0.0  0.666667
-2  0.0  0.0  2.000000 -1.000000  1.0  1.000000
-3  0.0  0.0  0.000000  0.000000  0.0  0.000000
-Now we just append our old target function
-     0    1         2         3    4         5
-0  0.0  1.0 -0.666667  0.333333  0.0  0.333333
-1  1.0  0.0 -0.333333 -0.333333  0.0  0.666667
-2  0.0  0.0  2.000000 -1.000000  1.0  1.000000
-3 -6.0 -3.0 -0.000000 -0.000000 -0.0  0.000000
-This matrix has basic columns: [0, 1, 4] and their rows [1, 0, 2]
-We eliminate basic variables from objective function:
-     0    1         2         3    4         5
-0  0.0  1.0 -0.666667  0.333333  0.0  0.333333
-1  1.0  0.0 -0.333333 -0.333333  0.0  0.666667
-2  0.0  0.0  2.000000 -1.000000  1.0  1.000000
-3  0.0  0.0 -4.000000 -1.000000  0.0  5.000000
-And off to simplex it goes!
-Phase two simplex is not bounded, its last matrix is: 
-     0    1    2    3         4         5
-0  0.0  1.0  0.0  0.0  0.333333  0.666667
-1  1.0  0.0  0.0 -0.5  0.166667  0.833333
-2  0.0  0.0  1.0 -0.5  0.500000  0.500000
-3  0.0  0.0  0.0 -3.0  2.000000  7.000000
-And its basics are [0, 1, 2]
-Simplex last tableau: 
-     0    1    2    3         4         5
-0  0.0  1.0  0.0  0.0  0.333333  0.666667
-1  1.0  0.0  0.0 -0.5  0.166667  0.833333
-2  0.0  0.0  1.0 -0.5  0.500000  0.500000
-3  0.0  0.0  0.0 -3.0  2.000000  7.000000
-Basics being: [0, 1, 2]
-And solution: 
-[0. 0. 0. 0. 0.]
+[-10.  -6. -15.]
+Dual simplex table detected
+     0    1    2    3    4    5    6     7
+0 -1.0  1.0 -1.0  1.0  1.0  0.0  0.0 -10.0
+1 -1.0  2.0 -3.0  4.0  0.0  1.0  0.0  -6.0
+2 -3.0  4.0 -5.0  6.0  0.0  0.0  1.0 -15.0
+3  2.0  3.0  4.0  5.0  0.0  0.0  0.0   0.0
