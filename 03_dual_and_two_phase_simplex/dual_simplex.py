@@ -82,6 +82,7 @@ def dual_simplex_(simplex_matrix, *args, **kwargs):
             result['message'] = 'Optimal value successfully found.'
             result['opt_val'] = -simplex_matrix[-1, -1]
             result['opt_point'] = lpu.fetch_sol_from_simplex_matrix(simplex_matrix, basic_column_indices)
+            result['opt_point_ut'] = result['opt_point']
             result['last_matrix'] = simplex_matrix
             result['basic_indices'] = basic_column_indices
             return result
@@ -94,6 +95,7 @@ def dual_simplex_(simplex_matrix, *args, **kwargs):
             result['message'] = 'Cond1 failed.'
             result['opt_val'] = -simplex_matrix[-1, -1]
             result['opt_point'] = np.zeros(n)
+            result['opt_point_ut'] = result['opt_point']
             result['last_matrix'] = simplex_matrix
             result['basic_indices'] = basic_column_indices
             return result
@@ -117,6 +119,7 @@ def dual_simplex_(simplex_matrix, *args, **kwargs):
             result['message'] = 'R not found.'
             result['opt_val'] = -simplex_matrix[-1, -1]
             result['opt_point'] = np.zeros(n)
+            result['opt_point_ut'] = result['opt_point']
             result['last_matrix'] = simplex_matrix
             result['basic_indices'] = basic_column_indices
             return result

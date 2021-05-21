@@ -367,6 +367,7 @@ def solve_lp(c, eqA, eqb, leqA, leqb, maxx=False):
     if maxx:
         res['opt_val'] *= -1
 
+    res["opt_point_ut"] = res["opt_point"]
     res["opt_point"] = res["opt_point"][:orig_n]
 
     return res
@@ -475,6 +476,11 @@ if __name__ == '__main__':
                         action='store_true',
                         help='Maximize the objective function (minimization is default).')
 
+    parser.add_argument('-d',
+                        '--debug',
+                        action='store_true',
+                        help='Debug version (compare results with scipy).')
+
     args = parser.parse_args()
     input_lines = lpp.read_lines_ds(args.input)
 
@@ -494,10 +500,19 @@ if __name__ == '__main__':
     print(f'Optimum reached for point: ')
     print(f'\t{tuple(res["opt_point"])}')
 
-    print('--debug')
-    print(f'And dotting function {c} with point {res["opt_point"]} gives')
-    print('\t', np.dot(c, res["opt_point"]))
-    
+    if args.debug:
+        x = res["opt_point"]
+        print(f'Debug: Checking whether function value is correct: ')
+        print(f'\t{tuple(c)} o {tuple(res["opt_point"])} = {np.dot(c, res["opt_point"])}')
+        print(f'Debug: Checking constraints:')
+        
+        for lhs, rhs in zip(eqA, eqb):
+            print(f'Constraint: {lhs} = {rhs}')
+            print(f'\t{np.dot(lhs, x)} = {rhs}')
+
+        for lhs, rhs in zip(leqA, leqb):
+            print(f'Constraint: {lhs} <= {rhs}')
+            print(f'\t{np.dot(lhs, x)} <= {rhs}')
     
 
 
