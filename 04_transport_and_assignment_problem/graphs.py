@@ -2,6 +2,15 @@ import numpy as np
 import utils as ut
 import sys
 
+def nice_print_(graph, shape):
+    for key in graph:
+        neighbors = graph[key]
+        nice_key = ut.unpack_index(key, shape)
+        nice_neighbors = [ut.unpack_index(ne, shape) for ne in neighbors]
+        print(f'{nice_key}: {nice_neighbors}')
+    
+    
+
 def construct_graph(theta_i, theta_j, caps):
     m, n = caps.shape
     shape = caps.shape

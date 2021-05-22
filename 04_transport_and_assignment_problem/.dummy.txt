@@ -25,6 +25,7 @@ basis solution:
 0  35.0  35.0   0.0
 1  30.0   0.0   0.0
 2   0.0   7.0  43.0
+	 basic indices: [(0, 0), (0, 1), (1, 0), (2, 1), (2, 2)]
 System before removal: 
 [[1. 0. 0. 1. 0. 0.]
  [1. 0. 0. 0. 1. 0.]
@@ -32,12 +33,45 @@ System before removal:
  [0. 0. 1. 0. 1. 0.]
  [0. 0. 1. 0. 0. 1.]]
 [5. 7. 4. 7. 7.]
+Choosing to anull potential u_0
+After anulling we have a new system: 
+[[0. 0. 1. 0. 0.]
+ [0. 0. 0. 1. 0.]
+ [1. 0. 1. 0. 0.]
+ [0. 1. 0. 1. 0.]
+ [0. 1. 0. 0. 1.]]
+The system solution is: [ 0. -1.  0.  5.  7.  7.]
+Finding correctional start: 
+	C_{02} - u_0 - v_2 = 8.0 - 0.0 - 7.0 = 1.0
+	C_{11} - u_1 - v_1 = 4.0 - -1.0 - 7.0 = -2.0
+	C_{12} - u_1 - v_2 = 6.0 - -1.0 - 7.0 = 0.0
+	C_{20} - u_2 - v_0 = 6.0 - 0.0 - 5.0 = 1.0
+Choosing r, s = (1, 1)
+Constructed graph: 
+(0, 0): [(0, 1), (1, 0)]
+(0, 1): [(0, 0), (1, 1), (2, 1)]
+(1, 0): [(0, 0), (1, 1)]
+(1, 1): [(0, 1), (1, 0), (2, 1)]
+(2, 1): [(2, 2), (0, 1), (1, 1)]
+(2, 2): [(2, 1)]
+Cycle coordinates: [(1, 1), (0, 1), (0, 0), (1, 0), (1, 1)]
+Initial correction chosen at position (1, 0) with value 30.0
+Position (1, 1) with value 0.0 gets +theta
+Position (0, 1) with value 35.0 gets -theta
+Position (0, 0) with value 35.0 gets +theta
+Position (1, 0) with value 30.0 gets -theta
+Position (1, 1) with value 30.0 gets +theta
+New basic solution: 
+[[65.  5.  0.]
+ [ 0. 30.  0.]
+ [ 0.  7. 43.]]
 >>> Potential method Iteration 1
 basis solution: 
       0     1     2
 0  65.0   5.0   0.0
 1   0.0  30.0   0.0
 2   0.0   7.0  43.0
+	 basic indices: [(0, 0), (0, 1), (1, 1), (2, 1), (2, 2)]
 System before removal: 
 [[1. 0. 0. 1. 0. 0.]
  [1. 0. 0. 0. 1. 0.]
@@ -45,6 +79,19 @@ System before removal:
  [0. 0. 1. 0. 1. 0.]
  [0. 0. 1. 0. 0. 1.]]
 [5. 7. 4. 7. 7.]
+Choosing to anull potential v_1
+After anulling we have a new system: 
+[[1. 0. 1. 0. 0.]
+ [1. 0. 0. 1. 0.]
+ [0. 0. 0. 1. 0.]
+ [0. 1. 0. 1. 0.]
+ [0. 1. 0. 0. 1.]]
+The system solution is: [3. 0. 3. 2. 4. 4.]
+Finding correctional start: 
+	C_{02} - u_0 - v_2 = 8.0 - 3.0 - 4.0 = 1.0
+	C_{10} - u_1 - v_0 = 4.0 - 0.0 - 2.0 = 2.0
+	C_{12} - u_1 - v_2 = 6.0 - 0.0 - 4.0 = 2.0
+	C_{20} - u_2 - v_0 = 6.0 - 3.0 - 2.0 = 1.0
 830.0
 [[65.  5.  0.]
  [ 0. 30.  0.]

@@ -115,10 +115,12 @@ def potential_method(C, a, b, basis_solution, caps):
     iteration = 0
     while True:
         print(f'>>> Potential method Iteration {iteration}')
-        print(f'basis solution: ')
-        print(pd.DataFrame(basis_solution))
         basis_indices = list(map(tuple, np.argwhere(caps == 1)))
         non_basis_indices = list(map(tuple, np.argwhere(caps == 0)))
+
+        print(f'basis solution: ')
+        print(pd.DataFrame(basis_solution))
+        print(f'\t basic indices: {basis_indices}')
 
         potentials_systemA = np.zeros((m + n - 1, m + n))
         potentials_systemB = np.zeros(m + n - 1)
@@ -135,15 +137,23 @@ def potential_method(C, a, b, basis_solution, caps):
 
         to_set_zero_index, to_set_zero_axis = find_best_potential(caps)
 
+        print(f'Choosing to anull potential {"u" if to_set_zero_index == 0 else "v"}_{to_set_zero_index}')
+
         to_set_zero_actual_index = to_set_zero_index
         if to_set_zero_axis == 1:
             to_set_zero_index = m + to_set_zero_index
 
         potentials_systemA = np.delete(potentials_systemA, to_set_zero_actual_index, 1)
 
+        print(f'After anulling we have a new system: ')
+        print(potentials_systemA)
+
         potential_system_solution = np.linalg.solve(potentials_systemA, potentials_systemB)
         potential_system_solution = np.insert(potential_system_solution, to_set_zero_actual_index, 0)
 
+        print(f'The system solution is: {potential_system_solution}')
+
+        print(f'Finding correctional start: ')
         r = None
         s = None
         lowest_val = None
@@ -152,6 +162,7 @@ def potential_method(C, a, b, basis_solution, caps):
             ui = potential_system_solution[i]
             vj = potential_system_solution[m + j]
             val = C[i][j] - ui - vj
+            print(f'\tC_{{{i}{j}}} - u_{i} - v_{j} = {C[i][j]} - {ui} - {vj} = {val}')
             if val < 0:
                 if lowest_val is None or val < lowest_val:
                     lowest_val = val
@@ -161,9 +172,17 @@ def potential_method(C, a, b, basis_solution, caps):
         if lowest_val is None:
             return basis_solution
 
+        print(f'Choosing r, s = {r, s}')
+
         graph = graphs.get_graph(r, s, caps)
+
+        print('Constructed graph: ')
+        graphs.nice_print_(graph, (m, n))
+
         cycle = graphs.find_cycle(graph, ut.pack_indices(r, s, shape), shape=shape)
         cycle_coordinates = list(map(lambda x: ut.unpack_index(x, shape), cycle))
+
+        print(f'Cycle coordinates: {cycle_coordinates}')
 
         # Correctional theta min XijB where XijB is in the cycle
         corr_theta_i = None
@@ -176,16 +195,25 @@ def potential_method(C, a, b, basis_solution, caps):
                     corr_theta_j = j
                     corr_theta = basis_solution[i][j]
         
+        print(f'Initial correction chosen at position {corr_theta_i, corr_theta_j} with value {corr_theta}')
+
         # Now X_r_s is supposed to enter the basis
         # And and XijB min leaves the basis
         for idx, (i, j) in enumerate(cycle_coordinates):
             coeff = 1 if idx % 2 == 0 else -1
+            print(f'Position {i, j} with value {basis_solution[i][j]} gets {"+" if coeff == 1 else "-"}theta')
             basis_solution[i][j] += coeff * corr_theta
+
+        
 
         basis_solution[r][s] = corr_theta              
 
         caps[corr_theta_i][corr_theta_j] = 0
         caps[r][s] = 1
+
+        print(f'New basic solution: ')
+        print(basis_solution)
+
         iteration += 1
 
 def interpret_potential_method_results(solution, C, fictional_rows=[], fictional_columns=[]):
