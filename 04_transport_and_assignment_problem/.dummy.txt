@@ -1,20 +1,51 @@
  > Starting min cost method for: 
-     0    1    2   a
-0  550  300  400  40
-1  350  300  100  20
-b   25   10   25   0
- >> Min position is (1, 2) with cost = 100.0, supply = 20.0, demand = 25.0
+    0   1   2   a
+0   5   7   8  70
+1   4   4   6  30
+2   6   7   7  50
+b  65  42  43   0
+ >> Min position is (1, 0) with cost = 4.0, supply = 30.0, demand = 65.0
 	 >> Removing row 1
- >> Min position is (0, 1) with cost = 300.0, supply = 40.0, demand = 10.0
-	 >> Removing column 1
- >> Min position is (0, 2) with cost = 400.0, supply = 30.0, demand = 5.0
-	 >> Removing column 2
- >> Min position is (0, 0) with cost = 550.0, supply = 25.0, demand = 25.0
+ >> Min position is (0, 0) with cost = 5.0, supply = 70.0, demand = 35.0
+	 >> Removing column 0
+ >> Min position is (0, 1) with cost = 7.0, supply = 35.0, demand = 42.0
 	 >> Removing row 0
+ >> Min position is (2, 1) with cost = 7.0, supply = 50.0, demand = 7.0
+	 >> Removing column 1
+ >> Min position is (2, 2) with cost = 7.0, supply = 43.0, demand = 43.0
+	 >> Removing row 2
 > Basic feasible solution found by min cost method: 
       0     1     2
-0  25.0  10.0   5.0
-1   0.0   0.0  20.0
-20750.0
-[[25. 10.  5.]
- [ 0.  0. 20.]]
+0  35.0  35.0   0.0
+1  30.0   0.0   0.0
+2   0.0   7.0  43.0
+>>> Potential method Iteration 0
+basis solution: 
+      0     1     2
+0  35.0  35.0   0.0
+1  30.0   0.0   0.0
+2   0.0   7.0  43.0
+System before removal: 
+[[1. 0. 0. 1. 0. 0.]
+ [1. 0. 0. 0. 1. 0.]
+ [0. 1. 0. 1. 0. 0.]
+ [0. 0. 1. 0. 1. 0.]
+ [0. 0. 1. 0. 0. 1.]]
+[5. 7. 4. 7. 7.]
+>>> Potential method Iteration 1
+basis solution: 
+      0     1     2
+0  65.0   5.0   0.0
+1   0.0  30.0   0.0
+2   0.0   7.0  43.0
+System before removal: 
+[[1. 0. 0. 1. 0. 0.]
+ [1. 0. 0. 0. 1. 0.]
+ [0. 1. 0. 0. 1. 0.]
+ [0. 0. 1. 0. 1. 0.]
+ [0. 0. 1. 0. 0. 1.]]
+[5. 7. 4. 7. 7.]
+830.0
+[[65.  5.  0.]
+ [ 0. 30.  0.]
+ [ 0.  7. 43.]]

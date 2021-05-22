@@ -114,6 +114,9 @@ def potential_method(C, a, b, basis_solution, caps):
     # ui + vj = cijB
     iteration = 0
     while True:
+        print(f'>>> Potential method Iteration {iteration}')
+        print(f'basis solution: ')
+        print(pd.DataFrame(basis_solution))
         basis_indices = list(map(tuple, np.argwhere(caps == 1)))
         non_basis_indices = list(map(tuple, np.argwhere(caps == 0)))
 
@@ -125,6 +128,10 @@ def potential_method(C, a, b, basis_solution, caps):
             potentials_systemA[row][base_i] = 1.0
             potentials_systemA[row][m + base_j] = 1.0
             potentials_systemB[row] = C[base_i][base_j]
+
+        print(f'System before removal: ')
+        print(potentials_systemA)
+        print(potentials_systemB)
 
         to_set_zero_index, to_set_zero_axis = find_best_potential(caps)
 
