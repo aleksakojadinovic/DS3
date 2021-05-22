@@ -1,6 +1,9 @@
 """
-Implements the functionality of a directed graph.
+Implements the functionality of a directed graph, and some util functions.
 """
+import collections
+
+
 class DirectedGraph:
 
     def __init__(self, num_nodes) -> None:
@@ -25,6 +28,54 @@ class DirectedGraph:
         self.out_degrees[node_from] -= 1
         self.in_degrees[node_to] -= 1
 
+def bfs(graph: DirectedGraph, start: int = None) -> dict:
+    if start is None:
+        start = 0
+    if start < 0 or start > graph.num_nodes:
+        raise ValueError(f'Start node out of bounds: {start}')
+
+
+    q           = [start]
+    visited     = [False for _ in range(graph.num_nodes)]
+    in_numbers  = [-1 for _ in range(graph.num_nodes)]
+    nodes_      = []
+
+    visit_id_   = 0
+
+    while q:
+        node = q.pop(0)
+        if visited[node]:
+            continue
+
+        visited[node] = True
+        in_numbers[node] = visit_id_
+        visit_id_ += 1
+        nodes_.append(node)
+
+        for v, _ in graph.adj_list[node]:
+            if visited[v]:
+                continue
+            
+            q.append(v)
+
+    total_visited_ = sum(visited)
+
+    return {
+        "total_nodes_visited": total_visited_,
+        "nodes": nodes_,
+        "visited": visited,
+        "numbers": in_numbers
+    }
+
     
-        
+
     
+
+
+    
+                
+
+
+
+    
+
