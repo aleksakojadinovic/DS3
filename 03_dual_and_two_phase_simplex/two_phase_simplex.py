@@ -206,7 +206,7 @@ def phase_one_cleanup(matrix, basic_indices, artificial_indices):
 
 
 # Assumes all constrains have been converted to equalities
-def two_phase_simplex_solver(c, eqA, eqb):
+def two_phase_simplex_solver(c, eqA, eqb, no_dual=False):
 
     
 
@@ -229,13 +229,14 @@ def two_phase_simplex_solver(c, eqA, eqb):
     print(f'b = ')
     print(eqb)
 
-    is_dual, dual_basic_cols, _ = check_for_duality_abc(c, eqA, eqb)
-    if is_dual:
-        print(f'Dual simplex table detected')
-        
-        dual_simplex_matrix = pack_to_matrix(eqA, eqb, c)
-        print(pd.DataFrame(dual_simplex_matrix))
-        return d_simplex(dual_simplex_matrix, basic_column_indices=dual_basic_cols)
+    if not no_dual:
+        is_dual, dual_basic_cols, _ = check_for_duality_abc(c, eqA, eqb)
+        if is_dual:
+            print(f'Dual simplex table detected')
+            
+            dual_simplex_matrix = pack_to_matrix(eqA, eqb, c)
+            print(pd.DataFrame(dual_simplex_matrix))
+            return d_simplex(dual_simplex_matrix, basic_column_indices=dual_basic_cols)
 
     eqA, eqb = convert_b_to_pos(eqA, eqb)
     print(f'Converting all bs to positive, resulting in: ')

@@ -2,15 +2,18 @@
 Implements the functionality of a directed graph, and some util functions.
 """
 
-from typing import Iterable
+from _simplex_utils.lp_parse import parse_matrix_dimensions
+from typing import Iterable, List, Tuple
 import copy
 import sys
+import io
 
 
 def read_lines_ds(filepath):
     try:
         lines = open(filepath, "r").readlines()
         lines = (line.strip() for line in lines)
+        lines = (' '.join(line.split()) for line in lines)
         lines = (line for line in lines if line)
         lines = (line for line in lines if line[0] != '#')
         lines = list(lines)
@@ -21,9 +24,9 @@ def read_lines_ds(filepath):
 
 class DirectedGraph:
     @staticmethod
-    def from_edges(edges: Iterable[tuple(int, int, float)]):
-        last_node_idx = max(edges, key=lambda x: max(x[0], x[1]))
-        num_nodes = last_node_idx + 1
+    def from_edges(edges: Iterable[tuple[int, int, float]]):
+        edge_with_max_node = max(edges, key=lambda x: max(x[0], x[1]))
+        num_nodes = max(edge_with_max_node[0], edge_with_max_node[1]) + 1
         g = DirectedGraph(num_nodes)
         for (u, v, w) in edges:
             g.connect(u, v, w)
@@ -99,6 +102,10 @@ class DirectedGraph:
         return DirectedGraph.from_lines(lines, format)
 
     @staticmethod
+    def from_string(string_input: str, format: str):
+        return DirectedGraph.from_file(io.StringIO(string_input), format)
+
+    @staticmethod
     def from_args(cmd_args):
         return DirectedGraph.from_file(cmd_args.input, cmd_args.format)
 
@@ -109,9 +116,6 @@ class DirectedGraph:
         self.out_degrees        = [0 for _ in range(num_nodes)]
 
     def connect(self, node_from: int, node_to: int, weight: float) -> None:
-        if list(filter(lambda entry: entry[0] == node_to, self.adj_list[node_from], self.adj_list[node_from])):
-            raise ValueError(f'Node {node_from} is already connected to node {node_to}.')
-
         self.adj_list[node_from].append((node_to, weight))
         self.in_degrees[node_to] += 1
         self.out_degrees[node_from] += 1
@@ -123,6 +127,19 @@ class DirectedGraph:
         self.adj_list[node_from] = new_list
         self.out_degrees[node_from] -= 1
         self.in_degrees[node_to] -= 1
+
+    def edges(self) -> List[Tuple[int, int, float]]:
+        edges: List[Tuple[int, int, float]] = []
+        for source in range(self.num_nodes):
+            for destination, weight in self.adj_list[source]:
+                edges.append((source, destination, weight))
+        
+        return edges
+
+    def __str__(self) -> str:
+        head = f'Directed graph with {self.num_nodes} nodes.'
+
+        pass
 
 
 def bfs(graph: DirectedGraph, start: int = None) -> dict:
