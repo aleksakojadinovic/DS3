@@ -73,6 +73,7 @@ def gomorys_cutting_plane_solver(c, eqA, eqb, log=False):
         stdout_backup = sys.stdout
         sys.stdout = SIMPLEX_OUT
         tf_simplex_result = two_phase_simplex_solver(c, eqA, eqb, no_dual=True)
+        print(f'='*200)
         sys.stdout = stdout_backup
         
         printl(f'Starting two phase simplex solver....')

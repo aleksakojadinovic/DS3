@@ -2,7 +2,6 @@
 Implements the functionality of a directed graph, and some util functions.
 """
 
-from _simplex_utils.lp_parse import parse_matrix_dimensions
 from typing import Iterable, List, Tuple
 import copy
 import sys
@@ -135,6 +134,9 @@ class DirectedGraph:
                 edges.append((source, destination, weight))
         
         return edges
+
+    def nodes(self) -> List[int]:
+        return list(range(self.num_nodes))
 
     def __str__(self) -> str:
         head = f'Directed graph with {self.num_nodes} nodes.'

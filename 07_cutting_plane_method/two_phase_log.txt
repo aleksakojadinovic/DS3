@@ -1,0 +1,98 @@
+Starting two phase simplex solver with
+A = 
+     0    1    2    3    4
+0 -8.0  7.0  1.0  0.0  0.0
+1  1.0  6.0  0.0  1.0  0.0
+2  7.0 -3.0  0.0  0.0  1.0
+b = 
+[14. 60. 16.]
+Converting all bs to positive, resulting in: 
+A = 
+     0    1    2    3    4
+0 -8.0  7.0  1.0  0.0  0.0
+1  1.0  6.0  0.0  1.0  0.0
+2  7.0 -3.0  0.0  0.0  1.0
+b = 
+[14. 60. 16.]
+Starting preparation
+After preparation we have:
+A = 
+     0    1    2    3    4
+0 -8.0  7.0  1.0  0.0  0.0
+1  1.0  6.0  0.0  1.0  0.0
+2  7.0 -3.0  0.0  0.0  1.0
+b = 
+[14. 60. 16.]
+Basic indices: [2, 3, 4]
+Artificial indices: []
+Artificial row indices: []
+We will now append the sub-problem objective function:
+     0    1    2    3    4     5
+0 -8.0  7.0  1.0  0.0  0.0  14.0
+1  1.0  6.0  0.0  1.0  0.0  60.0
+2  7.0 -3.0  0.0  0.0  1.0  16.0
+3  0.0  0.0  0.0  0.0  0.0   0.0
+Now we eliminate artificial variables from objective function:
+     0    1    2    3    4     5
+0 -8.0  7.0  1.0  0.0  0.0  14.0
+1  1.0  6.0  0.0  1.0  0.0  60.0
+2  7.0 -3.0  0.0  0.0  1.0  16.0
+3  0.0  0.0  0.0  0.0  0.0   0.0
+Now we send that to phase one simplex, along with basic indices being: 
+[2, 3, 4]
+Phase one simplex is good, and it gives us this tableau: 
+     0    1    2    3    4     5
+0 -8.0  7.0  1.0  0.0  0.0  14.0
+1  1.0  6.0  0.0  1.0  0.0  60.0
+2  7.0 -3.0  0.0  0.0  1.0  16.0
+3  0.0  0.0  0.0  0.0  0.0   0.0
+With last basic indices being: [2 3 4]
+Now we send it to cleanup
+Starting matrix cleanup
+Matrix: 
+     0    1    2    3    4     5
+0 -8.0  7.0  1.0  0.0  0.0  14.0
+1  1.0  6.0  0.0  1.0  0.0  60.0
+2  7.0 -3.0  0.0  0.0  1.0  16.0
+3  0.0  0.0  0.0  0.0  0.0   0.0
+	basic indices: [2 3 4]
+	artif indices: []
+After removing columns [] we have
+Matrix: 
+     0    1    2    3    4     5
+0 -8.0  7.0  1.0  0.0  0.0  14.0
+1  1.0  6.0  0.0  1.0  0.0  60.0
+2  7.0 -3.0  0.0  0.0  1.0  16.0
+3  0.0  0.0  0.0  0.0  0.0   0.0
+	basic indices: [2 3 4]
+	artif indices: []
+No more artificial, so cleanup is done!
+After cleanup our matrix is:
+     0    1    2    3    4     5
+0 -8.0  7.0  1.0  0.0  0.0  14.0
+1  1.0  6.0  0.0  1.0  0.0  60.0
+2  7.0 -3.0  0.0  0.0  1.0  16.0
+3  0.0  0.0  0.0  0.0  0.0   0.0
+Now we just append our old target function
+     0    1    2    3    4     5
+0 -8.0  7.0  1.0  0.0  0.0  14.0
+1  1.0  6.0  0.0  1.0  0.0  60.0
+2  7.0 -3.0  0.0  0.0  1.0  16.0
+3 -1.0 -1.0  0.0  0.0  0.0   0.0
+This matrix has basic columns: [2, 3, 4] and their rows [0, 1, 2]
+We eliminate basic variables from objective function:
+     0    1    2    3    4     5
+0 -8.0  7.0  1.0  0.0  0.0  14.0
+1  1.0  6.0  0.0  1.0  0.0  60.0
+2  7.0 -3.0  0.0  0.0  1.0  16.0
+3 -1.0 -1.0  0.0  0.0  0.0   0.0
+And off to simplex it goes!
+Simplex last tableau: 
+     0             1    2         3         4          5
+0  0.0  0.000000e+00  1.0 -0.555556  1.222222   0.222222
+1  0.0  1.000000e+00  0.0  0.155556 -0.022222   8.977778
+2  1.0  5.551115e-17  0.0  0.066667  0.133333   6.133333
+3  0.0  0.000000e+00  0.0  0.222222  0.111111  15.111111
+Basics being: [2, 1, 0]
+And solution: 
+[6.13333333 8.97777778 0.22222222 0.         0.        ]

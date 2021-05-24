@@ -360,10 +360,10 @@ def solve_lp(c, eqA, eqb, leqA, leqb, maxx=False):
 
     if maxx:
         c *= -1
-    stdout_backup = sys.stdout
-    sys.stdout = open('two_phase_log.txt', 'w')
+    # stdout_backup = sys.stdout
+    # sys.stdout = open('two_phase_log.txt', 'w')
     res = two_phase_simplex_solver(c, eqA, eqb)
-    sys.stdout = stdout_backup
+    # sys.stdout = stdout_backup
 
     if maxx:
         res['opt_val'] *= -1
