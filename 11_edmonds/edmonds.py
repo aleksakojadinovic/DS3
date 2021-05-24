@@ -37,6 +37,7 @@ def update_edge_list(edge_list: List[tuple[int, int, float]], supernode: int, no
             # This should now be replaced with an edge (u, e_start_node) with weight w - w(fc) where fc is in the cycle and its destination is v
             replacement_candidates = list(filter(lambda edge: edge[1] == v, edges_in_cycle))
             if not replacement_candidates:
+                print(f'Replacement candidate not found, not sure what to do')
                 sys.exit(1)
 
 
@@ -132,7 +133,7 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
             Vp.append(x)
             x_input_edges = list(filter(lambda edge: edge[1] == x, E))
             if not x_input_edges:
-                print(f'Minimum edge not found, fuck this.')
+                print(f'Minimum edge not found not sure what to do.')
                 sys.exit(1)
             e = min(x_input_edges, key=lambda edge: edge[2])
             print(f'\t\tMinimum input edge into node x={x} is edge {e}')
