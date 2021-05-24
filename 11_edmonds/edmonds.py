@@ -312,13 +312,11 @@ if __name__ == '__main__':
 
         edge_colors = ['r' if e in active_edges_nw else 'k' for e in nx_all_edges]
         edge_widths = [3 if e in active_edges_nw else 2 for e in nx_all_edges]
+        node_names = dict([(i, f'{i} (root)') if i == result["root"] else (i, str(i)) for i in range(g.num_nodes)])
+        node_colors = ['darkorange' if i == result["root"] else 'aqua' for i in range(g.num_nodes)]
         
         pos = nx.circular_layout(nxg)
-        edge_labels = nx.get_edge_attributes(nxg, 'weight')
-
-
-        node_names = dict([(i, f'{i} (root)') if i == result["root"] else (i, str(i)) for i in range(g.num_nodes)])
-        node_colors = ['aqua' if i == result["root"] else 'darkorange' for i in range(g.num_nodes)]
+        edge_labels = nx.get_edge_attributes(nxg, 'weight')       
 
         nx.draw(nxg, pos, with_labels=True, labels=node_names, node_color=node_colors, edge_color=edge_colors, width=edge_widths)
         nx.draw_networkx_edge_labels(nxg, pos, edge_labels=edge_labels)
