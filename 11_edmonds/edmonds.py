@@ -240,11 +240,11 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
         active_edges = set(filter(lambda edge: edge[0] != node_idx and edge[1] != node_idx, active_edges))
 
         for lost_in in lost_inc:
-            print(f'Adding inc {lost_in}')
+            print(f'\t\tAdding inc {lost_in}')
             active_edges.add(lost_in)
         
         for lost_out in lost_out:
-            print(f'Adding outg {lost_out}')
+            print(f'\t\tAdding outg {lost_out}')
             active_edges.add(lost_out)
 
         for cycle_edge in cycle_edges:
