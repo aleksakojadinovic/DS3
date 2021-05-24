@@ -44,6 +44,20 @@ def update_edge_list(edge_list: List[tuple[int, int, float]], supernode: int, no
     
     return edge_list, lost_incoming_edges, lost_outgoing_edges
 
+def pick_root(graph: DirectedGraph):
+    # Nodes with no incoming edges
+    no_in_nodes = list(filter(lambda entry: entry[1] == 0, enumerate(graph.in_degrees)))
+    if len(no_in_nodes) > 1:
+        return -1, 'Cannot pick root, there are {len(no_in_nodes)} nodes with no incoming edges.'
+    
+    # If there is a node with no incoming edges then it has to be root
+    if no_in_nodes:
+        return no_in_nodes[0][0], ''
+
+    # Otherwise choose a node with max out edges
+    max_out_degree_entry = max(enumerate(graph.out_degrees), key=lambda e: e[1])
+    return max_out_degree_entry[0], ''
+
 
 def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
 
@@ -51,8 +65,14 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
     # Step 0
     if r == 'auto' or r is None:
         # We're choosing highest out-degree node
-        max_out_degree_entry = max(enumerate(graph.out_degrees), key=lambda e: e[1])
-        r = max_out_degree_entry[0]
+        # max_out_degree_entry = max(enumerate(graph.out_degrees), key=lambda e: e[1])
+        # r = max_out_degree_entry[0]
+        r, msg = pick_root(graph)
+        if r is None:
+            print(msg)
+            sys.exit(1)
+
+        print(f'Chosen root {r}')
 
     if r < 0 or r >= graph.num_nodes:
         raise ValueError(f'Root {r} out of bounds for graph with {graph.num_nodes} vertices.')    
@@ -65,6 +85,8 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
     
     super_nodes_ = []
     all_covered_nodes_ = set()
+
+    bfs_numbers = bfs(graph, start=r)
 
 
     print(f'Starting Edmonson algorithm.')
