@@ -288,9 +288,13 @@ if __name__ == '__main__':
 
     parser.add_argument('-v',
                         '--visualize',
-                        help='Visualize the resulting tree.',
-                        action='store_true')
+                        action='store_true',
+                        help='Visualize the resulting tree.')
 
+    parser.add_argument('-p',
+                        '--prog',
+                        default='neato',
+                        help='Which graphviz visualization program to use.')
 
     args = parser.parse_args()
     g = DirectedGraph.from_args(args)
@@ -301,7 +305,7 @@ if __name__ == '__main__':
     sys.stdout = STDOUT
 
     active_edges = list(result["active_edges"])
-    print(f'Total edge weight sum: {result["edge_sum"]}')
+    print(f'Total edge weight: {result["edge_sum"]}')
     print(f'Edges: ')
     for edge in list(sorted(active_edges)):
         print(f'\t{edge}')
@@ -319,7 +323,7 @@ if __name__ == '__main__':
         node_names = dict([(i, f'{i} (root)') if i == result["root"] else (i, str(i)) for i in range(g.num_nodes)])
         node_colors = ['darkorange' if i == result["root"] else 'aqua' for i in range(g.num_nodes)]
         
-        pos = nx.circular_layout(nxg)
+        pos = nx.nx_pydot.graphviz_layout(nxg, prog=args.prog)
         edge_labels = nx.get_edge_attributes(nxg, 'weight')       
 
         nx.draw(nxg, pos, with_labels=True, labels=node_names, node_color=node_colors, edge_color=edge_colors, width=edge_widths)
