@@ -253,7 +253,8 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
 
 
     result = {
-        "active_edges": active_edges
+        "active_edges": active_edges,
+        "root": r
     }
     print(f'Finally, all active edges are: {list(active_edges)}')
     return result
@@ -306,16 +307,6 @@ if __name__ == '__main__':
 
         active_edges_nw = list(map(lambda e: (e[0], e[1]), active_edges))
         nx_all_edges = nxg.edges()  
-
-        print(f'edges: ')
-        for edge in active_edges_nw:
-            print(f'\t{edge}')
-
-        
-        print(f'nx edges: ')
-        for edge in nx_all_edges:
-            print(f'\t{edge}')
-
         
         
 
@@ -323,9 +314,13 @@ if __name__ == '__main__':
         edge_widths = [3 if e in active_edges_nw else 2 for e in nx_all_edges]
         
         pos = nx.circular_layout(nxg)
-        labels = nx.get_edge_attributes(nxg,'weight')
+        edge_labels = nx.get_edge_attributes(nxg, 'weight')
 
-        nx.draw(nxg, pos, with_labels=True, edge_color=edge_colors, width=edge_widths)
-        nx.draw_networkx_edge_labels(nxg, pos, edge_labels=labels)
+
+        node_names = dict([(i, f'{i} (root)') if i == result["root"] else (i, str(i)) for i in range(g.num_nodes)])
+        node_colors = ['aqua' if i == result["root"] else 'darkorange' for i in range(g.num_nodes)]
+
+        nx.draw(nxg, pos, with_labels=True, labels=node_names, node_color=node_colors, edge_color=edge_colors, width=edge_widths)
+        nx.draw_networkx_edge_labels(nxg, pos, edge_labels=edge_labels)
 
         plt.show()
