@@ -10,6 +10,9 @@ from numpy.core.numeric import outer
 from graphs import DirectedGraph
 from graphs import bfs
 
+import networkx as nx
+import matplotlib.pyplot as plt
+
         
 STDOUT = sys.stdout
 LOGFILE = 'out.txt'
@@ -36,7 +39,8 @@ def update_edge_list(edge_list: List[tuple[int, int, float]], supernode: int, no
             if not replacement_candidates:
                 sys.exit(1)
 
-            lost_incoming_edges.add((v, u, w))
+
+            lost_incoming_edges.add((u, v, w))
 
             fcu, fcv, fcw = replacement_candidates[0]
             edge_list[edge_idx] = (u, supernode, w - fcw)
@@ -61,7 +65,7 @@ def pick_root(graph: DirectedGraph):
 
 def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
 
-    E = graph.edges()
+    
     # Step 0
     if r == 'auto' or r is None:
         # We're choosing highest out-degree node
@@ -80,6 +84,7 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
 
     # Step 1
     V = [i for i in range(graph.num_nodes)]
+    E = graph.edges()
     W = [r]
     F = []
     
@@ -234,9 +239,11 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
         active_edges = set(filter(lambda edge: edge[0] != node_idx and edge[1] != node_idx, active_edges))
 
         for lost_in in lost_inc:
+            print(f'Adding inc {lost_in}')
             active_edges.add(lost_in)
         
         for lost_out in lost_out:
+            print(f'Adding outg {lost_out}')
             active_edges.add(lost_out)
 
         for cycle_edge in cycle_edges:
@@ -244,7 +251,12 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
 
         active_edges = set(filter(lambda edge: edge != non_edge, active_edges))
 
+
+    result = {
+        "active_edges": active_edges
+    }
     print(f'Finally, all active edges are: {list(active_edges)}')
+    return result
 
         
         
@@ -270,11 +282,50 @@ if __name__ == '__main__':
                         default='auto',
                         help='The root node.')
 
+    parser.add_argument('-v',
+                        '--visualize',
+                        help='Visualize the resulting tree.',
+                        action='store_true')
+
 
     args = parser.parse_args()
     g = DirectedGraph.from_args(args)
-    # for source, nbs in enumerate(g.adj_list):
-    #     print(f'Node v_{source}: ')
-    #     for nb, w in nbs:
-    #         print(f'\t----{w}----> {nb}')
-    edmonds(g)
+    original_edges = list(g.edges())
+
+
+    result = edmonds(g)
+    sys.stdout = STDOUT
+
+    active_edges = list(result["active_edges"])
+    print(f'Edges: ')
+    for edge in active_edges:
+        print(f'\t{edge}')
+
+    if args.visualize:
+        nxg = g.to_networkx_graph()    
+
+        active_edges_nw = list(map(lambda e: (e[0], e[1]), active_edges))
+        nx_all_edges = nxg.edges()  
+
+        print(f'edges: ')
+        for edge in active_edges_nw:
+            print(f'\t{edge}')
+
+        
+        print(f'nx edges: ')
+        for edge in nx_all_edges:
+            print(f'\t{edge}')
+
+        
+        
+
+        edge_colors = ['r' if e in active_edges_nw else 'k' for e in nx_all_edges]
+        edge_widths = [3 if e in active_edges_nw else 2 for e in nx_all_edges]
+        
+        pos = nx.circular_layout(nxg)
+        labels = nx.get_edge_attributes(nxg,'weight')
+
+        nx.draw(nxg, pos, with_labels=True, edge_color=edge_colors, width=edge_widths)
+        nx.draw_networkx_edge_labels(nxg, pos, edge_labels=labels)
+
+        plt.show()

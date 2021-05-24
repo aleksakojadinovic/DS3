@@ -7,6 +7,7 @@ import copy
 import sys
 import io
 
+import networkx as nx
 
 def read_lines_ds(filepath):
     try:
@@ -138,10 +139,16 @@ class DirectedGraph:
     def nodes(self) -> List[int]:
         return list(range(self.num_nodes))
 
-    def __str__(self) -> str:
-        head = f'Directed graph with {self.num_nodes} nodes.'
 
-        pass
+    def to_networkx_graph(self):
+        dod = dict()
+        for i in range(self.num_nodes):
+            dod[i] = dict()
+            for j, w in self.adj_list[i]:
+                dod[i][j] = {"weight": w}
+        
+        # return nx.from_dict_of_dicts(dod)
+        return nx.DiGraph(incoming_graph_data=dod)
 
 
 def bfs(graph: DirectedGraph, start: int = None) -> dict:
