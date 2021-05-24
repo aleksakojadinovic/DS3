@@ -45,11 +45,19 @@ def update_edge_list(edge_list: List[tuple[int, int, float]], supernode: int, no
     return edge_list, lost_incoming_edges, lost_outgoing_edges
 
 
-def edmonds(graph: DirectedGraph) -> None:
+def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
 
     E = graph.edges()
     # Step 0
-    r = 0
+    if r == 'auto' or r is None:
+        # We're choosing highest out-degree node
+        max_out_degree_entry = max(enumerate(graph.out_degrees), key=lambda e: e[1])
+        r = max_out_degree_entry[0]
+
+    if r < 0 or r >= graph.num_nodes:
+        raise ValueError(f'Root {r} out of bounds for graph with {graph.num_nodes} vertices.')    
+
+
     # Step 1
     V = [i for i in range(graph.num_nodes)]
     W = [r]
