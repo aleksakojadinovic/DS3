@@ -231,6 +231,7 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
     print(f'Starting supernode expansion')
     for super_node in reversed(super_nodes_):
         node_idx = super_node["node_idx"]
+        print(f'\tExpanding supernode {node_idx}')
         lost_inc = super_node["lost_inc"]
         lost_out = super_node["lost_out"]
         cycle_edges = super_node["cycle_edges"]
@@ -254,9 +255,10 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
 
     result = {
         "active_edges": active_edges,
+        "edge_sum": sum(map(lambda x: x[2], active_edges)),
         "root": r
     }
-    print(f'Finally, all active edges are: {list(active_edges)}')
+    print(f'Finally, all active edges are: {sorted(list(active_edges))}')
     return result
 
         
@@ -298,8 +300,9 @@ if __name__ == '__main__':
     sys.stdout = STDOUT
 
     active_edges = list(result["active_edges"])
+    print(f'Total edge weight sum: {result["edge_sum"]}')
     print(f'Edges: ')
-    for edge in active_edges:
+    for edge in list(sorted(active_edges)):
         print(f'\t{edge}')
 
     if args.visualize:
