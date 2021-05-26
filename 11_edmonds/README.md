@@ -1,4 +1,4 @@
-# Edmonson algorithm
+# Edmonds algorithm
 
 Finds shortest arborescence of a directed graph.
 __________________________________________
