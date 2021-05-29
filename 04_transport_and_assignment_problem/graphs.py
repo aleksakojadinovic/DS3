@@ -58,7 +58,7 @@ def get_graph(i, j, caps):
 # TODO: This takes any valid cycle of length greater than 4.
 #       Check whether it's enough or we need to find the longest one.
 #       If so just add `candidates` list and argmax-it by length
-# TODO: Also try to make it non-recursive as this shit is exponential af
+# TODO: Also try to make it non-recursive as this is exponential 
 def find_cycle(g, start_node, shape = None):
     all_nodes = list(g.keys())
     num_nodes = len(all_nodes)
