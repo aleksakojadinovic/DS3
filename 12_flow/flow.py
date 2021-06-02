@@ -4,6 +4,9 @@ import copy
 import numpy as np
 import pandas as pd
 import argparse
+import networkx as nx
+import matplotlib.pyplot as plt
+
 
 
 def fatal(msg):
@@ -142,17 +145,22 @@ def get_temporary_bfs_graph(residual_network):
     nodes = [k for k in residual_network]
     tmp_graph = dict()
     for node in nodes:
-        tmp_graph[node] = set()
+        tmp_graph[node] = []
     for node_from in nodes:
         for node_to in nodes:
+            # print(f'Considering edge {node_from} to {node_to}')
             if node_from == node_to:
+                # print(f'\t nope (same)')
                 continue
             if residual_network[node_from][node_to] is None:
+                # print(f'\t nope (None)')
                 continue
             flow, cap = residual_network[node_from][node_to]
             if flow >= cap:
+                # print(f'\t nope (bad flow)')
                 continue
-            tmp_graph[node_from].add(node_to)
+            tmp_graph[node_from].append(node_to)
+            
     return tmp_graph
 
 def reconstruct_path(start_node, end_node, parents):
@@ -169,6 +177,7 @@ def find_augmenting_path(residual_network, start_node='s', end_node='t'):
     graph = get_temporary_bfs_graph(residual_network)
 
 
+    
     nodes = [k for k in graph]
     if start_node not in nodes:
         return None
@@ -219,22 +228,29 @@ def strip_residuals(residual_network):
     
     
 def ek2(residual_network, source='s', sink='t'):
+    keys = [k for k in residual_network]
+    if source not in keys:
+        raise ValueError(f'Invalid source {source}')
+    if sink not in keys:
+        raise ValueError(f'Invalid sink {sink}')
+
+
     iteration = 0
     while True:
-        print(f'**** Iteration {iteration}')
-        print(f'Current graph: ')
-        print(residual_nice(residual_network))
+        # print(f'**** Iteration {iteration}')
+        # print(f'Current graph: ')
+        # print(residual_nice(residual_network))
         # if iteration == 1:
         #     print(f'force break for debug')
         #     break
         iteration += 1
         apath = find_augmenting_path(residual_network, source, sink)
         if apath is None:
-            print(f'No path found.')
+            # print(f'No path found.')
             break
         
         # Now find minimum slack and update edges along the path
-        print(f'Found path {apath}')
+        # print(f'Found path {apath}')
         pairs = list(zip(apath, apath[1:]))
         flows = [residual_network[node_from][node_to] for node_from, node_to in pairs]
         slacks = [b - a for a, b in flows]
@@ -244,7 +260,7 @@ def ek2(residual_network, source='s', sink='t'):
 
         min_slack_idx = min(enumerate(slacks), key=lambda x:x[1])[0]
         min_slack = slacks[min_slack_idx]
-        print(f'Minimum slack corresponds to edge {pairs[min_slack_idx]} and it is {min_slack}')
+        # print(f'Minimum slack corresponds to edge {pairs[min_slack_idx]} and it is {min_slack}')
 
         
         # Now we update edges along the augmenting path by setting:
@@ -259,7 +275,7 @@ def ek2(residual_network, source='s', sink='t'):
             else: 
                 new_flow = flow + min_slack
 
-            print(f'Updating edge {node_from} -- {node_to}')
+            # print(f'Updating edge {node_from} -- {node_to}')
 
             residual_network[node_from][node_to] = (new_flow, cap)
 
@@ -285,11 +301,36 @@ def ek2(residual_network, source='s', sink='t'):
     # print(f'---- FINAL RESIDUAL GRAPH ---- ')
     # print(residual_nice(residual_network))
 
-    # final_stripped = strip_residuals(residual_network)
+    final_stripped = strip_residuals(residual_network)
     # print(f'Stripped residuals: ')
     # print(residual_nice(final_stripped))
 
-    return
+
+    flow = 0
+    for from_source in final_stripped[source]:
+        if final_stripped[source][from_source] is not None:
+            flow += final_stripped[source][from_source][0]
+
+    return flow, final_stripped
+
+
+
+    
+
+def network_to_networkx_graph(network):
+    nodes = [k for k in network]
+    net_input = dict()
+    for node_from in nodes:
+        net_input[node_from] = dict()
+        for node_to in nodes:
+            if node_from == node_to or network[node_from][node_to] is None:
+                continue
+            flow, cap = network[node_from][node_to]
+            net_input[node_from][node_to] = {"label": f'{flow} / {cap}'}
+
+    return nx.DiGraph(incoming_graph_data=net_input)
+                
+
 
 
 
@@ -303,7 +344,7 @@ if __name__ == '__main__':
     parser.add_argument('-v',
                         '--visualize',
                         action='store_true',
-                        help='Visualize the resulting tree.')
+                        help='Visualize the resulting flow.')
 
     parser.add_argument('-p',
                         '--prog',
@@ -320,37 +361,40 @@ if __name__ == '__main__':
                         default='t',
                         help='The sink node.')
 
+
     args = parser.parse_args()
     network, nodes = parse_flow_network(args.input)
 
     residual_network = network_to_residual_graph(network)
-    print(f'STARTED WITH: ')
-    print(residual_nice(residual_network))
+    flow, result = ek2(residual_network, args.source, args.end)
+
+    print(f'Maximum flow:')
+    print(f'\t{flow}')
 
 
-    ek2(residual_network)
+    if args.visualize:
+        nx_graph = network_to_networkx_graph(result)
+        nx_edges = nx_graph.edges()
+
+
+
+        edge_data = [result[edge[0]][edge[1]] for edge in nx_edges]
+
+        edge_labels = dict([((a, b), f'{result[a][b][0]} / {result[a][b][1]}') for a, b in nx_edges])
+        edge_widths = [2 + (x[0]/x[1]) * 3 if x[1] != 0 else 1 for x in edge_data]
+        edge_colors = ['blue' if e[0] > 0 else 'black'  for e in edge_data]
+
+        node_colors = ['darkorange' if x == args.source or x == args.end  else 'aqua' for x in nx_graph.nodes()]
+
+        pos = nx.nx_pydot.graphviz_layout(nx_graph, prog=args.prog)
+        nx.draw(nx_graph, pos, with_labels=True, node_color=node_colors, width=edge_widths, edge_color=edge_colors)
+        nx.draw_networkx_edge_labels(nx_graph, pos, edge_labels=edge_labels)
+        plt.show()
+
+        
+
+
     
-
-    # if args.source not in nodes:
-    #     print(f'Fatal error: Source node "{args.source}" not found.')
-    #     sys.exit(1)
-    # if args.end not in nodes:
-    #     print(f'Fatal error: Sink node "{args.end}" not found.')
-    #     sys.exit(1)
-         
-
-    # flow, capacities = edmonds_karp(network, nodes, s=args.source, t=args.end)
-    # print(f'Max flow is {flow}')
-
-    # og_matrix, og_df = dod_to_df(network)
-    # ek_matrix, ek_df = dod_to_df(capacities)
-
-    # print('OG: ')
-    # print(og_df)
-
-    # print(f'Capacities: ')
-    # print(ek_df)
-
     
 
     
