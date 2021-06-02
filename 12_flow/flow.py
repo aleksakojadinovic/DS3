@@ -366,10 +366,21 @@ if __name__ == '__main__':
     network, nodes = parse_flow_network(args.input)
 
     residual_network = network_to_residual_graph(network)
-    flow, result = ek2(residual_network, args.source, args.end)
+    max_flow, result = ek2(residual_network, args.source, args.end)
 
     print(f'Maximum flow:')
-    print(f'\t{flow}')
+    print(f'\t{max_flow}')
+
+    print(f'Solution:')
+    for node_from in result:
+        targets = [k for k in result[node_from] if result[node_from][k] is not None]
+        if not targets:
+            continue
+        print(f'\t{node_from}')
+        for node_to in targets:
+            flow, cap = result[node_from][node_to]
+            print(f'\t\t--- {flow} / {cap} ---> {node_to}')
+
 
 
     if args.visualize:
@@ -389,6 +400,7 @@ if __name__ == '__main__':
         pos = nx.nx_pydot.graphviz_layout(nx_graph, prog=args.prog)
         nx.draw(nx_graph, pos, with_labels=True, node_color=node_colors, width=edge_widths, edge_color=edge_colors)
         nx.draw_networkx_edge_labels(nx_graph, pos, edge_labels=edge_labels)
+        plt.gcf().canvas.manager.set_window_title(f'Max flow is {max_flow}')
         plt.show()
 
         
