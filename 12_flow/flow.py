@@ -1,6 +1,7 @@
 
 import sys
 import copy
+from typing import List
 import numpy as np
 import pandas as pd
 import argparse
@@ -24,8 +25,9 @@ def read_lines_ds(filepath):
         return lines
     except:
         fatal(f'Could not open graph file: {filepath}')
+        
 
-def parse_flow_network(filepath):
+def parse_residual_network_new(filepath):
     lines = read_lines_ds(filepath)
     # V = None
     # try:
@@ -33,8 +35,7 @@ def parse_flow_network(filepath):
     # except:
     #     fatal(f'Cannot parse number of nodes from {lines[0]}')
 
-    network = dict()
-    node_markers = set()
+    network = ResidualNetworkGraph()
     for line in lines:
         line_strings = line.split(" ")
         if len(line_strings) != 3:
@@ -43,269 +44,176 @@ def parse_flow_network(filepath):
         dest        = line_strings[1]
         cap_string  = line_strings[2]
 
-        node_markers.add(source)
-        node_markers.add(dest)
 
         cap_val = None
         try:
             cap_val = int(cap_string)
         except:
             fatal(f'Failed to parse capacity from {cap_string}')
-        
-        if source not in network:
-            network[source] = dict()
-        network[source][dest] = cap_val
 
+        network.add_edge(source, dest, 0, cap_val)
+    
 
-    for node_from in node_markers:
-        if node_from not in network:
-            network[node_from] = dict()
-        for node_to in node_markers:
-            if node_from == node_to or node_to not in network[node_from]:
-                network[node_from][node_to] = 0
-
-
-
-
-    return network, node_markers
+    return network
         
 
-def dod_to_df(dod: dict):
-    keys = dod.keys()
-    keys = list(keys)
-    keys = list(sorted(keys))
-    matrix = np.zeros((len(keys), len(keys)), dtype='int32')
 
-    for i, key in enumerate(dod):
-        entries = [(k, dod[key][k]) for k in dod[key]]
-        entries = list(sorted(entries, key=lambda e: e[0]))
-        matrix[i] = list(map(lambda x: x[1], entries))
+class ResidualNetworkGraph:
+    def __init__(self) -> None:
+        self.forward_edges  = []
+        self.backward_edges = []
+        self.nodes = set()
 
 
-    df = pd.DataFrame(matrix, index=keys, columns=keys)
-    return matrix, df
+    def add_edge(self, node_from, node_to, flow, capacity):
+        next_id = len(self.forward_edges)
+        self.forward_edges.append({
+            "node_from": node_from,
+            "node_to": node_to,
+            "flow": flow,
+            "capacity": capacity,
+            "forward": True,
+            "id": next_id
+        })
 
+        self.backward_edges.append({
+            "node_from": node_to,
+            "node_to": node_from,
+            "flow": 0,
+            "capacity": 0,
+            "forward": False,
+            "id": next_id
+        })
 
-
-            
-def residual_nice(residual_network):
-    
-    V = len(residual_network)
-    matrix =[['' for _ in range(V)] for _ in range(V)]
-    
-    sorted_keys = list(sorted([k for k in residual_network]))
-
-    for i, node_from in enumerate(sorted_keys):
-        for j, node_to in enumerate(sorted_keys):
-            entry = residual_network[node_from][node_to]
-            if entry is None:
-                matrix[i][j] = 'N'
-            else:
-                flow, cap = entry
-                matrix[i][j] = f'{flow} / {cap}'
-
-
-
-    return pd.DataFrame(matrix, columns=sorted_keys, index=sorted_keys)
-            
-
-
-# Converts a network with just capacities into a network 
-# where edge weight is x/y where x is current flow and y is capacity
-# Also it adds residual edges
-# Assumes full network ("dict matrix")
-def network_to_residual_graph(network):
-    residual_network = copy.deepcopy(network)
-    # First pass to add forward edges
-    for source_node in network:
-        for target_node in network[source_node]:
-            # We skip non existing edges for now
-            if source_node == target_node or network[source_node][target_node] == 0:
-                residual_network[source_node][target_node] = None
-            else:
-                # Otherwise we need to update its value to 0/capacity
-                residual_network[source_node][target_node] = (0, network[source_node][target_node])
-
+        self.nodes.add(node_from)
+        self.nodes.add(node_to)
 
     
-    n_residual_network = copy.deepcopy(residual_network)
+    def unpack_edge(self, edge):
+        return edge["node_from"], edge["node_to"], edge["flow"], edge["capacity"], edge["forward"], edge["id"]
 
-    for node_from in residual_network:
-        for node_to in residual_network:
-            if node_from == node_to or residual_network[node_from][node_to] is None or residual_network[node_to][node_from] is not None:
+    def fetch_by_id(self, id, forward):
+        return self.forward_edges[id] if forward else self.backward_edges[id]
+
+    # Converts it to a simple graph but it must keep track of which node is which
+    def to_bfs_graph(self):
+        node_list = list(sorted(self.nodes))
+        graph = dict()
+
+        # Initialize for every node
+        for node in node_list:
+            graph[node] = []
+
+        for edge in self.forward_edges + self.backward_edges:
+            node_from, node_to, flow, capacity, forward, id = self.unpack_edge(edge)
+
+            # If an edge is fully saturated, we do not consider it at all
+            if flow >= capacity:
                 continue
-            # n_residual_network[node_to][node_from] = (-residual_network[node_from][node_to][1], 0)
-            n_residual_network[node_to][node_from] = (0, 0)
+
+            graph[node_from].append({
+                "node_from": node_from,
+                "node_to": node_to,
+                "forward": forward,
+                "id": id
+            })
+
+        for node in node_list:
+            graph[node] = list(sorted(graph[node], key=lambda x: x["node_to"]))
+
+        return graph, node_list
 
 
-    return n_residual_network
+
+
+    def find_augmenting_path(self, source, sink):
+        graph, node_list = self.to_bfs_graph()
+    
+        if source not in node_list:
+            return None
+        if sink not in node_list:
+            return None
+
+        
+        q = [source]
+        visited             = dict([(n, False) for n in node_list])
+        parent              = dict([(n, None) for n in node_list])
+        parent_edge_ids     = dict([(n, None) for n in node_list])
+
+        while q:
+            current_node = q.pop(0)
+            if visited[current_node]:
+                continue
+            visited[current_node] = True
+            if current_node == sink:
+                current_node = sink
+                edges_on_path = []
+                while True:
+                    if current_node == source:
+                        return edges_on_path
+                    
+                    edges_on_path.append((
+                        parent_edge_ids[current_node][0],
+                        parent_edge_ids[current_node][1]
+                    ))
+
+                    current_node = parent[current_node]
+
                 
 
-def get_temporary_bfs_graph(residual_network):
-    nodes = [k for k in residual_network]
-    tmp_graph = dict()
-    for node in nodes:
-        tmp_graph[node] = []
-    for node_from in nodes:
-        for node_to in nodes:
-            # print(f'Considering edge {node_from} to {node_to}')
-            if node_from == node_to:
-                # print(f'\t nope (same)')
-                continue
-            if residual_network[node_from][node_to] is None:
-                # print(f'\t nope (None)')
-                continue
-            flow, cap = residual_network[node_from][node_to]
-            if flow >= cap:
-                # print(f'\t nope (bad flow)')
-                continue
-            tmp_graph[node_from].append(node_to)
-            
-    return tmp_graph
+            for next_entry in graph[current_node]:
+                next_node, forward, edge_id = next_entry["node_to"], next_entry["forward"], next_entry["id"]
+                if not visited[next_node] and next_node not in q:
+                    parent[next_node] = current_node
+                    parent_edge_ids[next_node] = (edge_id, forward)
+                    q.append(next_node)
 
-def reconstruct_path(start_node, end_node, parents):
-    path = []
-    current_node = end_node
-    while True:
-        path.append(current_node)
-        if current_node == start_node:
-            return list(reversed(path))
-        current_node = parents[current_node]
-        
-
-def find_augmenting_path(residual_network, start_node='s', end_node='t'):
-    graph = get_temporary_bfs_graph(residual_network)
-
-
-    
-    nodes = [k for k in graph]
-    if start_node not in nodes:
-        return None
-    if end_node not in nodes:
         return None
 
-    
-    q = [start_node]
-    visited = dict([(n, False) for n in nodes])
-    parent = dict([(n, None) for n in nodes])
 
-    while q:
-        current_node = q.pop(0)
-        if visited[current_node]:
-            continue
-        visited[current_node] = True
-        if current_node == end_node:
-            return reconstruct_path(start_node, end_node, parent)
+    def to_netx_graph(self):
+        nx_graph = nx.DiGraph()
 
-        for next_node in graph[current_node]:
-            if not visited[next_node] and next_node not in q:
-                parent[next_node] = current_node
-                q.append(next_node)
+        for id, edge in enumerate(self.forward_edges):
+            node_from, node_to, flow, capacity, _, _ = self.unpack_edge(edge)
+            nx_graph.add_edge(node_from, node_to, edge_id=id, flow=flow, capacity=capacity)
 
-    return None
+        return nx_graph
 
-
-    
-
-
-def strip_residuals(residual_network):
-    nodes = [k for k in residual_network]
-    new_network = copy.deepcopy(residual_network)
-
-    for node_from in nodes:
-        for node_to in nodes:
-            if node_from == node_to or residual_network[node_from][node_to] is None:
-                continue
-                
-            flow, cap = residual_network[node_from][node_to]
-
-            if cap != 0:
-                continue
-            new_network[node_from][node_to] = None
-
-
-    return new_network
-    
-    
-def ek2(residual_network, source='s', sink='t'):
-    keys = [k for k in residual_network]
-    if source not in keys:
-        raise ValueError(f'Invalid source {source}')
-    if sink not in keys:
-        raise ValueError(f'Invalid sink {sink}')
-
-
-    iteration = 0
+def ek_net_graph(residual_network_graph: ResidualNetworkGraph, source, sink):
     while True:
-        # print(f'**** Iteration {iteration}')
-        # print(f'Current graph: ')
-        # print(residual_nice(residual_network))
-        # if iteration == 1:
-        #     print(f'force break for debug')
-        #     break
-        iteration += 1
-        apath = find_augmenting_path(residual_network, source, sink)
+        apath = residual_network_graph.find_augmenting_path(source, sink)
+
         if apath is None:
-            # print(f'No path found.')
             break
+
+        min_slack = None
+        for edge_id, is_forward in apath:
+            edge = residual_network_graph.fetch_by_id(edge_id, is_forward)
+            _, _, flow, capacity, _, _ = residual_network_graph.unpack_edge(edge)
+
+            slack = capacity - flow
+
+            if min_slack is None or slack < min_slack:
+                min_slack = slack
+
+
+        for edge_id, is_forward in apath:
+            edge = residual_network_graph.fetch_by_id(edge_id, is_forward)
+            _, _, _, _, forward, _ = residual_network_graph.unpack_edge(edge)
+            if forward:
+                residual_network_graph.forward_edges[edge_id]["flow"] += min_slack
+            else:
+                residual_network_graph.backward_edges[edge_id]["flow"] -= min_slack
         
-        # Now find minimum slack and update edges along the path
-        # print(f'Found path {apath}')
-        pairs = list(zip(apath, apath[1:]))
-        flows = [residual_network[node_from][node_to] for node_from, node_to in pairs]
-        slacks = [b - a for a, b in flows]
-        # print(f'Edges : {pairs}')
-        # print(f'Flows : {flows}')
-        # print(f'Slacks: {slacks}')
-
-        min_slack_idx = min(enumerate(slacks), key=lambda x:x[1])[0]
-        min_slack = slacks[min_slack_idx]
-        # print(f'Minimum slack corresponds to edge {pairs[min_slack_idx]} and it is {min_slack}')
-
-        
-        # Now we update edges along the augmenting path by setting:
-            # forward edges to flow + slack
-            # backward edges to flow - slack
-        
-        for node_from, node_to in pairs:
-            flow, cap = residual_network[node_from][node_to]
-            new_flow = 0
-            if cap == 0:
-                new_flow = flow - min_slack
-            else: 
-                new_flow = flow + min_slack
-
-            # print(f'Updating edge {node_from} -- {node_to}')
-
-            residual_network[node_from][node_to] = (new_flow, cap)
-
-
-    final_stripped = strip_residuals(residual_network)
 
     flow = 0
-    for from_source in final_stripped[source]:
-        if final_stripped[source][from_source] is not None:
-            flow += final_stripped[source][from_source][0]
+    for edge in residual_network_graph.forward_edges:
+        if edge["node_from"] != source:
+            continue
+        flow += edge["flow"]
 
-    return flow, final_stripped
-
-
-
-    
-
-def network_to_networkx_graph(network):
-    nodes = [k for k in network]
-    net_input = dict()
-    for node_from in nodes:
-        net_input[node_from] = dict()
-        for node_to in nodes:
-            if node_from == node_to or network[node_from][node_to] is None:
-                continue
-            flow, cap = network[node_from][node_to]
-            net_input[node_from][node_to] = {"label": f'{flow} / {cap}'}
-
-    return nx.DiGraph(incoming_graph_data=net_input)
-                
+    return flow
 
 
 
@@ -339,47 +247,28 @@ if __name__ == '__main__':
 
 
     args = parser.parse_args()
-    network, nodes = parse_flow_network(args.input)
+    net = parse_residual_network_new(args.input)
+    max_flow = ek_net_graph(net, args.source, args.end)
 
-    residual_network = network_to_residual_graph(network)
-    max_flow, result = ek2(residual_network, args.source, args.end)
-
-    print(f'Maximum flow:')
+    print(f'Max flow found: ')
     print(f'\t{max_flow}')
 
-    print(f'Solution:')
-    for node_from in result:
-        targets = [k for k in result[node_from] if result[node_from][k] is not None]
-        if not targets:
-            continue
-        print(f'\t{node_from}')
-        for node_to in targets:
-            flow, cap = result[node_from][node_to]
-            print(f'\t\t--- {flow} / {cap} ---> {node_to}')
-
-
-
     if args.visualize:
-        nx_graph = network_to_networkx_graph(result)
-        nx_edges = nx_graph.edges()
-
-
-
-        edge_data = [result[edge[0]][edge[1]] for edge in nx_edges]
-
-        edge_labels = dict([((a, b), f'{result[a][b][0]} / {result[a][b][1]}') for a, b in nx_edges])
-        edge_widths = [2 + (x[0]/x[1]) * 3 if x[1] != 0 else 1 for x in edge_data]
-        edge_colors = ['blue' if e[0] > 0 else 'black'  for e in edge_data]
-
-        node_colors = ['darkorange' if x == args.source or x == args.end  else 'aqua' for x in nx_graph.nodes()]
-
+        nx_graph = net.to_netx_graph()
         pos = nx.nx_pydot.graphviz_layout(nx_graph, prog=args.prog)
-        nx.draw(nx_graph, pos, with_labels=True, node_color=node_colors, width=edge_widths, edge_color=edge_colors)
+
+        nx_graph_edges = nx_graph.edges(data=True)
+        
+        edge_labels = dict([      (   (u,v,),     f'{d["flow"]} / {d["capacity"]}')          for u,v,d in nx_graph_edges])
+        edge_colors = ['blue' if d['flow'] > 0 else 'black' for _, _, d in nx_graph_edges]
+        edge_widths = [2 + (d["flow"]/d["capacity"]) * 3 if d["capacity"] > 0 else 1 for _, _, d in nx_graph_edges]
+        node_colors = ['darkorange' if x == args.source or x == args.end  else 'aqua' for x in nx_graph.nodes()]
+    
+
+        nx.draw(nx_graph, pos, with_labels=True, node_color=node_colors, edge_color=edge_colors, width=edge_widths, connectionstyle='arc3, rad=0.1' )
         nx.draw_networkx_edge_labels(nx_graph, pos, edge_labels=edge_labels)
-        plt.gcf().canvas.manager.set_window_title(f'Max flow is {max_flow}')
         plt.show()
 
-        
 
 
     
