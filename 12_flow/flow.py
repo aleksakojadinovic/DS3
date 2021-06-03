@@ -66,6 +66,15 @@ class ResidualNetworkGraph:
 
 
     def add_edge(self, node_from, node_to, flow, capacity):
+        
+        if flow >= capacity:
+            raise ValueError(f'Flow cannot be greater than capacity.')
+
+        existing_edge = self.fetch_by_source_and_dest(node_from, node_to, True)
+        if existing_edge is not None:
+            existing_edge["capacity"] += capacity
+            existing_edge["flow"] += flow
+
         next_id = len(self.forward_edges)
         self.forward_edges.append({
             "node_from": node_from,
@@ -94,6 +103,17 @@ class ResidualNetworkGraph:
 
     def fetch_by_id(self, id, forward):
         return self.forward_edges[id] if forward else self.backward_edges[id]
+
+    def fetch_by_source_and_dest(self, node_from, node_to, forward):
+        if forward:
+            col = [e for e in self.forward_edges if e["node_from"] == node_from and e["node_to"] == node_to]
+        else:
+            col = [e for e in self.backward if e["node_from"] == node_from and e["node_to"] == node_to]
+
+        if not col:
+            return None
+
+        return col[0]
 
     # Converts it to a simple graph but it must keep track of which node is which
     def to_bfs_graph(self):
@@ -181,6 +201,12 @@ class ResidualNetworkGraph:
         return nx_graph
 
 def ek_net_graph(residual_network_graph: ResidualNetworkGraph, source, sink):
+    nodes = residual_network_graph.nodes
+    if source not in nodes:
+        raise ValueError(f'Invalid source node: {source}')
+    if sink not in nodes:
+        raise ValueError(f'Invalid sink node: {sink}')
+
     while True:
         apath = residual_network_graph.find_augmenting_path(source, sink)
 
@@ -203,6 +229,7 @@ def ek_net_graph(residual_network_graph: ResidualNetworkGraph, source, sink):
             _, _, _, _, forward, _ = residual_network_graph.unpack_edge(edge)
             if forward:
                 residual_network_graph.forward_edges[edge_id]["flow"] += min_slack
+                residual_network_graph.backward_edges[edge_id]["flow"] -= min_slack
             else:
                 residual_network_graph.backward_edges[edge_id]["flow"] -= min_slack
         
