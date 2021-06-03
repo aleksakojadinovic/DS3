@@ -1,3 +1,4 @@
+s t
 s a 4
 s c 2
 a b 4

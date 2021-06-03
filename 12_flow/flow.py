@@ -35,6 +35,15 @@ def parse_residual_network_new(filepath):
     # except:
     #     fatal(f'Cannot parse number of nodes from {lines[0]}')
 
+    first_line = lines[0]
+    first_line_s = first_line.split(" ")
+    if len(first_line_s) != 2:
+        fatal(f'Expecting two nodes in first line (source & sink).')
+
+    source_node = first_line_s[0]
+    sink_node = first_line_s[1]
+
+    lines = lines[1:]
     network = ResidualNetworkGraph()
     for line in lines:
         line_strings = line.split(" ")
@@ -54,7 +63,7 @@ def parse_residual_network_new(filepath):
         network.add_edge(source, dest, 0, cap_val)
     
 
-    return network
+    return network, source_node, sink_node
         
 
 
@@ -200,7 +209,7 @@ class ResidualNetworkGraph:
 
         return nx_graph
 
-def ek_net_graph(residual_network_graph: ResidualNetworkGraph, source, sink):
+def edmonds_karp(residual_network_graph: ResidualNetworkGraph, source, sink):
     nodes = residual_network_graph.nodes
     if source not in nodes:
         raise ValueError(f'Invalid source node: {source}')
@@ -262,20 +271,17 @@ if __name__ == '__main__':
                         default='neato',
                         help='Which graphviz visualization program to use.')
 
-    parser.add_argument('-s',
-                        '--source',
-                        default='s',
-                        help='The source node.')
-
-    parser.add_argument('-e',
-                        '--end',
-                        default='t',
-                        help='The sink node.')
 
 
     args = parser.parse_args()
-    net = parse_residual_network_new(args.input)
-    max_flow = ek_net_graph(net, args.source, args.end)
+    net, source, sink = parse_residual_network_new(args.input)
+    max_flow = 0
+    try:
+        max_flow = edmonds_karp(net, source, sink)
+    except ValueError as e:
+        print(e)
+        sys.exit(1)
+
 
     print(f'Max flow found: ')
     print(f'\t{max_flow}')
@@ -289,7 +295,7 @@ if __name__ == '__main__':
         edge_labels = dict([      (   (u,v,),     f'{d["flow"]} / {d["capacity"]}')          for u,v,d in nx_graph_edges])
         edge_colors = ['blue' if d['flow'] > 0 else 'black' for _, _, d in nx_graph_edges]
         edge_widths = [2 + (d["flow"]/d["capacity"]) * 3 if d["capacity"] > 0 else 1 for _, _, d in nx_graph_edges]
-        node_colors = ['darkorange' if x == args.source or x == args.end  else 'aqua' for x in nx_graph.nodes()]
+        node_colors = ['darkorange' if x == source or x == sink else 'aqua' for x in nx_graph.nodes()]
     
 
         nx.draw(nx_graph, pos, with_labels=True, node_color=node_colors, edge_color=edge_colors, width=edge_widths, connectionstyle='arc3, rad=0.1' )
