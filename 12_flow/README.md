@@ -20,7 +20,7 @@ u1 v1 c1
 ```
 where `s` and `t` are the source and sink node, and for every `u_i v_i c_i` line there is an edge from node `u_i` to `v_i` of flow capacity `c_i`. 
 
-*NOTE: Nodes do not need to be numbers, they can be any string (without spaces).*
+*NOTE: Nodes names do not need to be numbers, they can be arbitrary strings (without spaces & case sensitive).*
 
 
 
