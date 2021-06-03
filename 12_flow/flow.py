@@ -132,7 +132,7 @@ def network_to_residual_graph(network):
 
     for node_from in residual_network:
         for node_to in residual_network:
-            if node_from == node_to or residual_network[node_from][node_to] is None:
+            if node_from == node_to or residual_network[node_from][node_to] is None or residual_network[node_to][node_from] is not None:
                 continue
             # n_residual_network[node_to][node_from] = (-residual_network[node_from][node_to][1], 0)
             n_residual_network[node_to][node_from] = (0, 0)
@@ -279,34 +279,8 @@ def ek2(residual_network, source='s', sink='t'):
 
             residual_network[node_from][node_to] = (new_flow, cap)
 
-        # Also, if there is a forward edge on the path and its corresponding backward edge
-        # is NOT in the path, we have to update that edge as well AND VICE VERSA
-
-
-        # for node_from, node_to in pairs:
-        #     # If its reverse edge has already been used in path then it has been updared accordingly
-        #     if (node_to, node_from) in pairs:
-        #         continue
-
-        #     # Now we know that this edge has been used in the path
-        #     # but its reverse edge has not been used in the path
-
-        #     # This seems counter intuitive (we use positive if its backwards)
-        #     # That is because we're not updating this edge, but rather its corresponding reverse edge
-        #     flow, cap = residual_network[node_from][node_to]
-        #     to_add = min_slack if cap == 0 else -min_slack
-
-        #     other_flow, other_cap = residual_network[node_to][node_from]
-        #     residual_network[node_to][node_from] = (other_flow + to_add, other_cap)
-
-    # Calculate flow
-    # print(f'---- FINAL RESIDUAL GRAPH ---- ')
-    # print(residual_nice(residual_network))
 
     final_stripped = strip_residuals(residual_network)
-    # print(f'Stripped residuals: ')
-    # print(residual_nice(final_stripped))
-
 
     flow = 0
     for from_source in final_stripped[source]:
