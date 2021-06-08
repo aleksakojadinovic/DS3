@@ -362,7 +362,7 @@ def solve_lp(c, eqA, eqb, leqA, leqb, maxx=False):
         c *= -1
     # stdout_backup = sys.stdout
     # sys.stdout = open('two_phase_log.txt', 'w')
-    res = two_phase_simplex_solver(c, eqA, eqb)
+    res = two_phase_simplex_solver(c, eqA, eqb, no_dual=True)
     # sys.stdout = stdout_backup
 
     if maxx:

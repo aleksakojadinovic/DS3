@@ -1,5 +1,5 @@
 s t
-s a 4
+s a 5
 s c 2
 a b 4
 a d 1
@@ -8,4 +8,4 @@ c a 5
 c b 1
 c d 4
 d b 3
-d t 6
+d t 5

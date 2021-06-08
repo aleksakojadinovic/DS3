@@ -16,7 +16,6 @@ import matplotlib.pyplot as plt
         
 STDOUT = sys.stdout
 LOGFILE = 'out.txt'
-sys.stdout = open(LOGFILE, 'w')
 
 def update_edge_list(edge_list: List[tuple[int, int, float]], supernode: int, nodes_in_cycle: List[int], edges_in_cycle: List[tuple[int, int, float]]):
     edge_list = list(filter(lambda edge: edge[0] not in nodes_in_cycle or edge[1] not in nodes_in_cycle, edge_list))
@@ -130,8 +129,9 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
             print(f'\t\t\t current_path_edges Ep= {Ep}')
 
             # Step 4: Form a path P such that V(P) := V(P) U {x} and E(P) := E(P) U {e} where e is the minimum weight edge that ends in x
-            Vp.append(x)
-            x_input_edges = list(filter(lambda edge: edge[1] == x, E))
+            if x not in Vp: # Happens with supernodes
+                Vp.append(x)
+            x_input_edges = list(filter(lambda edge: edge[1] == x and x not in all_covered_nodes_, E))
             if not x_input_edges:
                 print(f'Minimum edge not found not sure what to do.')
                 sys.exit(1)
@@ -226,13 +226,29 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
     print(all_covered_nodes_)
 
     active_edges = set(F)
+    
+    # Let's remove all cycle edges that are kept as lost
+    all_cycles_edges = set()
+    for super_node in super_nodes_:
+        tups = map(lambda x: (x[0], x[1]), super_node['cycle_edges'])
+        all_cycles_edges = all_cycles_edges.union(set(super_node['cycle_edges']))
 
+    # print(f'Cycle edges among all supernodes: ')
+    # print(all_cycles_edges)
+
+    # for super_node in super_nodes_:
+    #     super_node['lost_inc'] = list(filter(lambda edge: edge not in all_cycles_edges ,super_node['lost_inc']))
+    #     super_node['lost_out'] = list(filter(lambda edge: edge not in all_cycles_edges ,super_node['lost_out']))
+        
+    non_edges = set()
     # Step 8: Expand all supernodes starting with the last one that's been added
     # Do so by adding cycle_edges that made the node, except for the last one (marked as non-edge in the dict)
     print(f'Starting supernode expansion')
     for super_node in reversed(super_nodes_):
         node_idx = super_node["node_idx"]
+        print(f'Active edges before expansion: {active_edges}')
         print(f'\tExpanding supernode {node_idx}')
+        print(super_node)
         lost_inc = super_node["lost_inc"]
         lost_out = super_node["lost_out"]
         cycle_edges = super_node["cycle_edges"]
@@ -251,7 +267,9 @@ def edmonds(graph: DirectedGraph, r: any = 'auto') -> None:
         for cycle_edge in cycle_edges:
             active_edges.add(cycle_edge)
 
-        active_edges = set(filter(lambda edge: edge != non_edge, active_edges))
+        non_edges.add((non_edge[0], non_edge[1]))
+
+    active_edges = set(filter(lambda edge: (edge[0], edge[1]) not in non_edges, active_edges))
 
 
     result = {
@@ -300,7 +318,7 @@ if __name__ == '__main__':
     g = DirectedGraph.from_args(args)
     original_edges = list(g.edges())
 
-
+    sys.stdout = open(LOGFILE, 'w')
     result = edmonds(g)
     sys.stdout = STDOUT
 
